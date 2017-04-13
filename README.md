@@ -35,7 +35,13 @@ $ gb info
 #### build
 
 ```
-$ mkae build
+$ make build
+```
+
+#### build clean
+
+```
+$ make clean
 ```
 /bin/ folder is created and **two binaries** you can see in the folder.
 **container-service** is client which can receive a command from server
