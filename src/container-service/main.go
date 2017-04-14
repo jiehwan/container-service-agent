@@ -16,53 +16,21 @@ import (
 	"encoding/json"	
 )
 
+var wss_server_url = "ws://10.113.62.204:4000"
+var wss_server_origin = "ws://10.113.62.204:4000"
+
 type Command struct {
 	Cmd string `json:"cmd"`
 }
 
-type ConnectReq struct {
-	Cmd string `json:"cmd"`
-	Name string `json:"name"`
-}
-
-type ConnectedResp struct {
-	Cmd string `json:"cmd"`
-	Token string `json:"token"`
-	Clinetnum int `json:"clientnum"`
-}
 
 func main() {
-	log.Printf("main\n")
 
-
-/*
-	proxy := os.Getenv("HTTP_PROXY")
-	proxyUrl, err := url.Parse(proxy)
-
-	myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}}
-
-	resp, err := myClient.Get("http://13.124.64.10/ws")
-	if err != nil {
-		log.Fatal("Get:", err)
-	}
-	log.Printf("resp{%s}\n", resp)
-*/
-
-	//ProxyDial("ws://13.124.64.10/ws", "", "ws://13.124.64.10/ws")
-	//ProxyDial("ws://13.124.64.10/ws", "tcp", "http://13.124.64.10")
-	//ProxyDial("ws://echo.websocket.org", "tcp", "ws://echo.websocket.org")
-
-	// no-proxy localhost
-	//ws, err := ProxyDial("ws://localhost:4000", "tcp", "ws://localhost:4000")
-	// proxy 10.113.76.39
-	//ws, err := ProxyDial("ws://10.113.76.39:4000", "tcp", "ws://10.113.76.39:4000")
-	// proxy 13.124.64.10
-	ws, err := ProxyDial("ws://13.124.64.10/ws", "tcp", "ws://13.124.64.10/ws")
+	ws, err := ProxyDial(wss_server_url, "tcp", wss_server_origin)
 
 	if err != nil {
 		log.Fatal("ProxyDial : ", err)
 	}
-	log.Printf("ws", ws)
 
 	defer ws.Close()
 
@@ -95,18 +63,6 @@ func main() {
 
 
     }
-
-	/* connect test1 : send and receive with JSON
-	*/
-	//wsTest1(ws)
-
-/*
-	var message string
-	if err := websocket.Message.Receive(ws, &message); err != nil {
-		log.Fatal(err)
-	}
-	log.Printf("received: %s", message)
-*/
 }
 
 func wsReceive(ws *websocket.Conn, chan_msg chan string) (err error) {
@@ -133,18 +89,6 @@ type ContainerLists struct {
 	Container []ContainerInfo `json:"container"`
 }
 
-/*
-// go-to-json output is follows.. but there is problem during init.
-type ContainerLists struct {
-	Cmd string `json:"cmd"`
-	ContainerCount int `json:"container_count"`
-	Container []struct {
-		ContainerID string `json:"container_id"`
-		ContainerStatus string `json:"container_status"`
-	} `json:"container"`
-}
-*/
-
 func wsSendContainerLists(ws *websocket.Conn) (err error) {
 
 	//First.. OK
@@ -162,24 +106,6 @@ func wsSendContainerLists(ws *websocket.Conn) (err error) {
 			},
 		},
 	}
-	
-	/*
-	//Second... OR we can set seperated format --> Error..
-	send := ContainerLists{}
-	send.Cmd = "getContainerLists"
-    send.ContainerCount = 2
-    send.Container[0].ContainerID = "1111"
-    send.Container[0].ContainerStatus = "running"
-    send.Container[1].ContainerID = "2222"
-    send.Container[1].ContainerStatus = "exited"
-    */
-
-    // TODO,,,
-
-
-
-
-
 
 	websocket.JSON.Send(ws, send)
 
@@ -199,6 +125,11 @@ func wsTest1(ws *websocket.Conn) (err error){
 }
 
 
+type ConnectReq struct {
+	Cmd string `json:"cmd"`
+	Name string `json:"name"`
+}
+
 func wsReqeustConnection(ws *websocket.Conn, name string) (err error) {
 	send := ConnectReq{}
     send.Cmd = "request"
@@ -207,6 +138,13 @@ func wsReqeustConnection(ws *websocket.Conn, name string) (err error) {
 	websocket.JSON.Send(ws, send)
 
 	return nil
+}
+
+
+type ConnectedResp struct {
+	Cmd string `json:"cmd"`
+	Token string `json:"token"`
+	Clinetnum int `json:"clientnum"`
 }
 
 func wsReceiveConnection(ws *websocket.Conn) (Token string, err error) {
@@ -226,7 +164,7 @@ func ProxyDial(url_, protocol, origin string) (ws *websocket.Conn, err error) {
 	log.Printf("http_proxy {%s}\n", os.Getenv("HTTP_PROXY"))
 
 	// comment out in case of testing without proxy
-	if strings.Contains(url_, "localhost") {
+	if strings.Contains(url_, "10.113.") {
 		return websocket.Dial(url_, protocol, origin)
 	}
 
