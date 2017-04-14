@@ -50,12 +50,13 @@ func main() {
 		json.Unmarshal([]byte(msg), &rcv)
 	    fmt.Println(rcv.Cmd)
 
+
 	    switch (rcv.Cmd) {
     	case "connected" :
     		log.Printf("connected succefully~~")
 
-		case "getContainerLists" :
-    		log.Printf("command <getContainerLists>")
+		case "GetContainersInfo" :
+    		log.Printf("command <GetContainersInfo>")
     		wsSendContainerLists(ws)
 
 	    default :
@@ -95,7 +96,7 @@ func wsSendContainerLists(ws *websocket.Conn) (err error) {
 	//First.. OK
 	/*
 	send := ContainerLists{
-		Cmd : "getContainerLists",
+		Cmd : "GetContainersInfo",
 		ContainerCount : 2,
 		Container :[]ContainerInfo{
 			{ 
