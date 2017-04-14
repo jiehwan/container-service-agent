@@ -8,6 +8,13 @@
 			"branch": "master"
 		},
 		{
+			"importpath": "golang.org/x/net/websocket",
+			"repository": "https://go.googlesource.com/net",
+			"revision": "5602c733f70afc6dcec6766be0d5034d4c4f14de",
+			"branch": "master",
+			"path": "/websocket"
+		},
+		{
 			"importpath": "gopkg.in/airbrake/gobrake.v2",
 			"repository": "https://gopkg.in/airbrake/gobrake.v2",
 			"revision": "668876711219e8b0206e2994bf0a59d889c775aa",
