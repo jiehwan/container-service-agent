@@ -14,7 +14,7 @@ import (
 	"net/http/httputil"
 
 	"encoding/json"	
-	"container-serviced/api"
+	"../api"
 )
 
 var wss_server_url = "ws://10.113.62.204:4000"
@@ -93,6 +93,7 @@ type ContainerLists struct {
 func wsSendContainerLists(ws *websocket.Conn) (err error) {
 
 	//First.. OK
+	/*
 	send := ContainerLists{
 		Cmd : "getContainerLists",
 		ContainerCount : 2,
@@ -107,6 +108,10 @@ func wsSendContainerLists(ws *websocket.Conn) (err error) {
 			},
 		},
 	}
+	*/
+
+	send, _ := api.GetContainersInfo()
+	log.Printf("send = ", send)
 
 	websocket.JSON.Send(ws, send)
 

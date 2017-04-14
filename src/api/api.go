@@ -21,8 +21,31 @@ type ContainerLists struct {
 	} `json:"container"`
 }
 */
+type ContainerService interface {
+	GetContainersInfo() (ContainerLists, error)
+}
 
-func GetContainersInfo() (err error) {
 
-	return nil
+
+
+/* 
+	STUB 
+*/
+func GetContainersInfo() (ContainerLists, error){
+	send := ContainerLists{
+		Cmd : "getContainerLists",
+		ContainerCount : 2,
+		Container :[]ContainerInfo{
+			{ 
+				ContainerID : "api-1111",
+				ContainerStatus : "running",
+			},
+			{
+				ContainerID : "api-2222",
+				ContainerStatus : "exited",
+			},
+		},
+	}
+
+	return send, nil
 }

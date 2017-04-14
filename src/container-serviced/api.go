@@ -1,4 +1,4 @@
-package main
+package api
 
 type ContainerInfo struct {
 	ContainerID     string `json:"container_id"`
@@ -23,4 +23,24 @@ type ContainerLists struct {
 */
 type ContainerService interface {
 	GetContainersInfo() (ContainerLists, error)
+}
+
+
+func GetContainersInfo() (ContainerLists, error){
+	send := ContainerLists{
+		Cmd : "getContainerLists",
+		ContainerCount : 2,
+		Container :[]ContainerInfo{
+			{ 
+				ContainerID : "api-1111",
+				ContainerStatus : "running",
+			},
+			{
+				ContainerID : "api-2222",
+				ContainerStatus : "exited",
+			},
+		},
+	}
+
+	return send, _
 }
