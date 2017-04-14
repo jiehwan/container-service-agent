@@ -1,4 +1,4 @@
-package api
+package csaapi
 
 type ContainerInfo struct {
 	ContainerID     string `json:"container_id"`
@@ -25,22 +25,25 @@ type ContainerService interface {
 	GetContainersInfo() (ContainerLists, error)
 }
 
+/*
+	STUB
+*/
+func GetContainersInfo() (ContainerLists, error) {
 
-func GetContainersInfo() (ContainerLists, error){
 	send := ContainerLists{
-		Cmd : "getContainerLists",
-		ContainerCount : 2,
-		Container :[]ContainerInfo{
-			{ 
-				ContainerID : "api-1111",
-				ContainerStatus : "running",
+		Cmd:            "getContainerLists",
+		ContainerCount: 2,
+		Container: []ContainerInfo{
+			{
+				ContainerID:     "api-1111",
+				ContainerStatus: "running",
 			},
 			{
-				ContainerID : "api-2222",
-				ContainerStatus : "exited",
+				ContainerID:     "api-2222",
+				ContainerStatus: "exited",
 			},
 		},
 	}
 
-	return send, _
+	return send, nil
 }
