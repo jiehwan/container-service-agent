@@ -1,5 +1,15 @@
 package csaapi
 
+import (
+	"fmt"
+	"github.com/tv42/httpunix"
+
+	"log"
+	"net/http"
+	"net/http/httputil"
+	"time"
+)
+
 type ContainerInfo struct {
 	ContainerID     string `json:"container_id"`
 	ContainerStatus string `json:"container_status"`
@@ -44,6 +54,28 @@ func GetContainersInfo() (ContainerLists, error) {
 			},
 		},
 	}
+
+	u := &httpunix.Transport{
+		DialTimeout:           100 * time.Millisecond,
+		RequestTimeout:        1 * time.Second,
+		ResponseHeaderTimeout: 1 * time.Second,
+	}
+	u.RegisterLocation("myservice", "/var/run/container_service.sock")
+
+	var client = http.Client{
+		Transport: u,
+	}
+
+	resp, err := client.Get("http+unix://myservice/getContainersInfo")
+	if err != nil {
+		log.Fatal(err)
+	}
+	buf, err := httputil.DumpResponse(resp, true)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%s", buf)
+	resp.Body.Close()
 
 	return send, nil
 }

@@ -3,18 +3,18 @@ package main
 import (
 	"fmt"
 	"log"
-	
+
 	"golang.org/x/net/websocket"
-	"os"
 	"io"
-	"strings"
 	"net"
 	"net/http"
-	"net/url"
 	"net/http/httputil"
+	"net/url"
+	"os"
+	"strings"
 
-	"encoding/json"	
-	"../api"
+	"csaapi"
+	"encoding/json"
 )
 
 var wss_server_url = "ws://10.113.62.204:4000"
@@ -23,7 +23,6 @@ var wss_server_origin = "ws://10.113.62.204:4000"
 type Command struct {
 	Cmd string `json:"cmd"`
 }
-
 
 func main() {
 
@@ -36,35 +35,33 @@ func main() {
 	defer ws.Close()
 
 	/* connect test2 : message driven
-	*/
+	 */
 	messages := make(chan string)
 	go wsReceive(ws, messages)
 
 	name, _ := os.Hostname()
-    err = wsReqeustConnection(ws, name)
+	err = wsReqeustConnection(ws, name)
 
-    for{
-    	msg := <-messages
+	for {
+		msg := <-messages
 
-    	rcv := Command{}
+		rcv := Command{}
 		json.Unmarshal([]byte(msg), &rcv)
-	    fmt.Println(rcv.Cmd)
+		fmt.Println(rcv.Cmd)
 
+		switch rcv.Cmd {
+		case "connected":
+			log.Printf("connected succefully~~")
 
-	    switch (rcv.Cmd) {
-    	case "connected" :
-    		log.Printf("connected succefully~~")
+		case "GetContainersInfo":
+			log.Printf("command <GetContainersInfo>")
+			wsSendContainerLists(ws)
 
-		case "GetContainersInfo" :
-    		log.Printf("command <GetContainersInfo>")
-    		wsSendContainerLists(ws)
+		default:
+			log.Printf("add command of {%s}", rcv.Cmd)
+		}
 
-	    default :
-	    	log.Printf("add command of {%s}", rcv.Cmd)
-	    }
-
-
-    }
+	}
 }
 
 func wsReceive(ws *websocket.Conn, chan_msg chan string) (err error) {
@@ -72,7 +69,7 @@ func wsReceive(ws *websocket.Conn, chan_msg chan string) (err error) {
 
 	for {
 		err = websocket.Message.Receive(ws, &read_buf)
-		if (err != nil) {
+		if err != nil {
 			log.Fatal(err)
 		}
 		log.Printf("received: %s", read_buf)
@@ -82,36 +79,36 @@ func wsReceive(ws *websocket.Conn, chan_msg chan string) (err error) {
 }
 
 type ContainerInfo struct {
-    ContainerID string `json:"container_id"`
+	ContainerID     string `json:"container_id"`
 	ContainerStatus string `json:"container_status"`
 }
 type ContainerLists struct {
-	Cmd string `json:"cmd"`
-	ContainerCount int `json:"container_count"`
-	Container []ContainerInfo `json:"container"`
+	Cmd            string          `json:"cmd"`
+	ContainerCount int             `json:"container_count"`
+	Container      []ContainerInfo `json:"container"`
 }
 
 func wsSendContainerLists(ws *websocket.Conn) (err error) {
 
 	//First.. OK
 	/*
-	send := ContainerLists{
-		Cmd : "GetContainersInfo",
-		ContainerCount : 2,
-		Container :[]ContainerInfo{
-			{ 
-				ContainerID : "1111",
-				ContainerStatus : "running",
+		send := ContainerLists{
+			Cmd : "GetContainersInfo",
+			ContainerCount : 2,
+			Container :[]ContainerInfo{
+				{
+					ContainerID : "1111",
+					ContainerStatus : "running",
+				},
+				{
+					ContainerID : "2222",
+					ContainerStatus : "exited",
+				},
 			},
-			{
-				ContainerID : "2222",
-				ContainerStatus : "exited",
-			},
-		},
-	}
+		}
 	*/
 
-	send, _ := api.GetContainersInfo()
+	send, _ := csaapi.GetContainersInfo()
 	log.Printf("send = ", send)
 
 	websocket.JSON.Send(ws, send)
@@ -119,52 +116,48 @@ func wsSendContainerLists(ws *websocket.Conn) (err error) {
 	return nil
 }
 
-
-func wsTest1(ws *websocket.Conn) (err error){
+func wsTest1(ws *websocket.Conn) (err error) {
 	name, _ := os.Hostname()
-    err = wsReqeustConnection(ws, name)
+	err = wsReqeustConnection(ws, name)
 
-    // receive connection token
-    Token, err := wsReceiveConnection(ws)
+	// receive connection token
+	Token, err := wsReceiveConnection(ws)
 	log.Printf("recv.Token = '%s'", Token)
 
 	return err
 }
 
-
 type ConnectReq struct {
-	Cmd string `json:"cmd"`
+	Cmd  string `json:"cmd"`
 	Name string `json:"name"`
 }
 
 func wsReqeustConnection(ws *websocket.Conn, name string) (err error) {
 	send := ConnectReq{}
-    send.Cmd = "request"
-    send.Name = name
+	send.Cmd = "request"
+	send.Name = name
 
 	websocket.JSON.Send(ws, send)
 
 	return nil
 }
 
-
 type ConnectedResp struct {
-	Cmd string `json:"cmd"`
-	Token string `json:"token"`
-	Clinetnum int `json:"clientnum"`
+	Cmd       string `json:"cmd"`
+	Token     string `json:"token"`
+	Clinetnum int    `json:"clientnum"`
 }
 
 func wsReceiveConnection(ws *websocket.Conn) (Token string, err error) {
 	recv := ConnectedResp{}
 
 	err = websocket.JSON.Receive(ws, &recv)
-	if(err != nil) {
+	if err != nil {
 		log.Fatal(err)
 	}
 
 	return recv.Token, err
 }
-
 
 func ProxyDial(url_, protocol, origin string) (ws *websocket.Conn, err error) {
 
@@ -213,7 +206,6 @@ func ProxyDial(url_, protocol, origin string) (ws *websocket.Conn, err error) {
 	return websocket.NewClient(config, client)
 }
 
-
 func HttpConnect(proxy, url_ string) (io.ReadWriteCloser, error) {
 	log.Printf("proxy =", proxy)
 	proxy_tcp_conn, err := net.Dial("tcp", proxy)
@@ -228,9 +220,8 @@ func HttpConnect(proxy, url_ string) (io.ReadWriteCloser, error) {
 		log.Fatal("Parse : ", err)
 		return nil, err
 	}
-	
-	log.Printf("proxy turl.Host =", string(turl.Host))
 
+	log.Printf("proxy turl.Host =", string(turl.Host))
 
 	req := http.Request{
 		Method: "CONNECT",
@@ -239,18 +230,18 @@ func HttpConnect(proxy, url_ string) (io.ReadWriteCloser, error) {
 	}
 
 	/*
-	// origin
-	req := http.Request{
-		Method: "CONNECT",
-		URL:    &url.URL{},
-		Host:   turl.Host,
-	}
+		// origin
+		req := http.Request{
+			Method: "CONNECT",
+			URL:    &url.URL{},
+			Host:   turl.Host,
+		}
 	*/
 
 	proxy_http_conn := httputil.NewProxyClientConn(proxy_tcp_conn, nil)
 	//cc := http.NewClientConn(proxy_tcp_conn, nil)
 
-	log.Printf("proxy_http_conn =", proxy_http_conn)	
+	log.Printf("proxy_http_conn =", proxy_http_conn)
 
 	resp, err := proxy_http_conn.Do(&req)
 	if err != nil && err != httputil.ErrPersistEOF {
@@ -262,58 +253,57 @@ func HttpConnect(proxy, url_ string) (io.ReadWriteCloser, error) {
 	rwc, _ := proxy_http_conn.Hijack()
 
 	return rwc, nil
-	
-}
 
+}
 
 // return Handler (A Handler reponds to an HTTP request)
 func websocketProxy(target string) http.Handler {
-        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-                d, err := net.Dial("tcp", target)
-                if err != nil {
-                        http.Error(w, "Error contacting backend server.", 500)
-                        log.Printf("Error dialing websocket backend %s: %v", target, err)
-                        return
-                }
-                hj, ok := w.(http.Hijacker)
-                if !ok {
-                        http.Error(w, "Not a hijacker?", 500)
-                        return
-                }
-                nc, _, err := hj.Hijack()
-                if err != nil {
-                        log.Printf("Hijack error: %v", err)
-                        return
-                }
-                defer nc.Close()
-                defer d.Close()
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		d, err := net.Dial("tcp", target)
+		if err != nil {
+			http.Error(w, "Error contacting backend server.", 500)
+			log.Printf("Error dialing websocket backend %s: %v", target, err)
+			return
+		}
+		hj, ok := w.(http.Hijacker)
+		if !ok {
+			http.Error(w, "Not a hijacker?", 500)
+			return
+		}
+		nc, _, err := hj.Hijack()
+		if err != nil {
+			log.Printf("Hijack error: %v", err)
+			return
+		}
+		defer nc.Close()
+		defer d.Close()
 
-                err = r.Write(d)
-                if err != nil {
-                        log.Printf("Error copying request to target: %v", err)
-                        return
-                }
+		err = r.Write(d)
+		if err != nil {
+			log.Printf("Error copying request to target: %v", err)
+			return
+		}
 
-                errc := make(chan error, 2)
-                cp := func(dst io.Writer, src io.Reader) {
-                        _, err := io.Copy(dst, src)
-                        errc <- err
-                }
-                go cp(d, nc)
-                go cp(nc, d)
-                <-errc
-        })
-    }
+		errc := make(chan error, 2)
+		cp := func(dst io.Writer, src io.Reader) {
+			_, err := io.Copy(dst, src)
+			errc <- err
+		}
+		go cp(d, nc)
+		go cp(nc, d)
+		<-errc
+	})
+}
 
 func json_marshal() {
 	// convert from struct to string
-    send := ConnectedResp{}
-    send.Cmd = "request"
-    send.Token = "1234"
-    send.Clinetnum = 88
+	send := ConnectedResp{}
+	send.Cmd = "request"
+	send.Token = "1234"
+	send.Clinetnum = 88
 
-    send_str, _ := json.Marshal(send)
-    fmt.Println(string(send_str))
+	send_str, _ := json.Marshal(send)
+	fmt.Println(string(send_str))
 }
 
 func json_unmarshal() {
@@ -323,7 +313,6 @@ func json_unmarshal() {
 			, "clinetnum": 3}`
 	rcv := ConnectedResp{}
 	json.Unmarshal([]byte(rcv_str), &rcv)
-    fmt.Println(rcv)
-    fmt.Println(rcv.Cmd)
+	fmt.Println(rcv)
+	fmt.Println(rcv.Cmd)
 }
-
