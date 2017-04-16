@@ -13,11 +13,6 @@ import (
 	"fmt"
 )
 
-const ContainerServiceSocket string = "/var/run/container_service.sock"
-const DockerLauncherSocket string = "/var/run/docker_launcher.sock"
-
-
-
 // APIResponse The api response sent from go supervisor
 type APIResponse struct {
 	Data  interface{}
@@ -47,7 +42,7 @@ func responseSenders(writer http.ResponseWriter) (sendResponse func(interface{},
 func getContainersInfo() (csaapi.ContainerLists, error) {
 	log.Printf("getContainersInfo")
 
-	c, err := net.Dial("unix", DockerLauncherSocket)
+	c, err := net.Dial("unix", csaapi.DockerLauncherSocket)
 	if err != nil {
 		log.Fatal("Dial error", err)
 	}
@@ -137,7 +132,7 @@ func setupApi(r *mux.Router) {
 
 func main() {
 	log.Printf("Container-Service Agent starting")
-	listenAddress := ContainerServiceSocket
+	listenAddress := csaapi.ContainerServiceSocket
 	router := mux.NewRouter()
 	setupApi(router)
 

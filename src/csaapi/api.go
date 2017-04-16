@@ -10,6 +10,13 @@ import (
 	"time"
 )
 
+
+const (
+	ContainerServiceSocket string = "/var/run/container_service.sock"
+	DockerLauncherSocket string = "/var/run/docker_launcher.sock"
+)
+
+
 type ContainerInfo struct {
 	ContainerID     string `json:"container_id"`
 	ContainerStatus string `json:"container_status"`
