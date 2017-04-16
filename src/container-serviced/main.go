@@ -42,10 +42,14 @@ func responseSenders(writer http.ResponseWriter) (sendResponse func(interface{},
 func getContainersInfo() (csaapi.ContainerLists, error) {
 	log.Printf("getContainersInfo")
 
-	c, err := net.Dial("unix", csaapi.DockerLauncherSocket)
+	var send csaapi.ContainerLists
+
+	c, err := net.Dial("unix", csaapi.DockerLauncherSocket) 
 	if err != nil {
 		log.Fatal("Dial error", err)
+		return send, nil
 	}
+	
 	defer c.Close()
 
 	var name string = "getContainersInfo"
@@ -83,10 +87,9 @@ func getContainersInfo() (csaapi.ContainerLists, error) {
 	}
 
 	log.Printf("%s\n", data)
-
 	// Need to parse json
 	//Stub Return
-	send := csaapi.ContainerLists{
+	send = csaapi.ContainerLists{
 		Cmd:            "getContainerLists",
 		ContainerCount: 2,
 		Container: []csaapi.ContainerInfo{
