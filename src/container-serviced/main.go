@@ -39,15 +39,14 @@ func responseSenders(writer http.ResponseWriter) (sendResponse func(interface{},
 	return
 }
 
-func getContainersInfo() (csaapi.ContainerLists, error) {
+func getContainersInfo() ([]byte, error) {
 	log.Printf("getContainersInfo")
 
-	var send csaapi.ContainerLists
-
+	var send_str []byte
 	c, err := net.Dial("unix", csaapi.DockerLauncherSocket) 
 	if err != nil {
 		log.Fatal("Dial error", err)
-		return send, nil
+		return send_str, nil
 	}
 	
 	defer c.Close()
@@ -89,7 +88,23 @@ func getContainersInfo() (csaapi.ContainerLists, error) {
 	log.Printf("%s\n", data)
 	// Need to parse json
 	//Stub Return
-	send = csaapi.ContainerLists{
+	/*send = csaapi.ContainerLists{
+		Cmd:            "getContainerLists",
+		ContainerCount: 2,
+		Container: []csaapi.ContainerInfo{
+			{
+				ContainerID:     "api-1111",
+				ContainerStatus: "running",
+			},
+			{
+				ContainerID:     "api-2222",
+				ContainerStatus: "exited",
+			},
+		},
+	}*/
+
+	
+	send := csaapi.ContainerLists{
 		Cmd:            "getContainerLists",
 		ContainerCount: 2,
 		Container: []csaapi.ContainerInfo{
@@ -104,7 +119,11 @@ func getContainersInfo() (csaapi.ContainerLists, error) {
 		},
 	}
 
-	return send, nil
+	send_str, _ = json.Marshal(send)
+	fmt.Println(string(send_str))
+
+
+	return send_str, nil
 }
 
 func GetContainersInfoHandler(writer http.ResponseWriter, request *http.Request) {

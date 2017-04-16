@@ -20,12 +20,6 @@ const (
 var path string = "http+unix://" + containerPrefix
 
 
-type ConnectedResp struct {
-	Cmd       string `json:"cmd"`
-	Token     string `json:"token"`
-	Clinetnum int    `json:"clientnum"`
-}
-
 type ContainerInfo struct {
 	ContainerID     string `json:"container_id"`
 	ContainerStatus string `json:"container_status"`
@@ -66,28 +60,33 @@ func GetContainersInfo() (ContainerLists, error) {
 		Transport: u,
 	}
 
+	resp, err := client.Get(path+"/getContainersInfo");
+	
+
 	var send ContainerLists
 
-	if resp, err := client.Get(path+"/getContainersInfo"); err != nil {
+	if err != nil {
 		return send, err
-	} else {
-		fmt.Println(resp.StatusCode)
-		if resp.StatusCode == 200 {
-			defer resp.Body.Close()
+	} 
 
-			contents, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				log.Fatal(err)
-			}
-			rcv := ConnectedResp{}
-			json.Unmarshal([]byte(contents), &rcv)
-			fmt.Println(rcv)
-		} else {
-			log.Fatal("Status : %d", resp.StatusCode)	
+	fmt.Println(resp.StatusCode)
+	if resp.StatusCode == 200 {
+		defer resp.Body.Close()
+
+		contents, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Fatal(err)
 		}
+		send = ContainerLists{}
+		json.Unmarshal([]byte(contents), &send)
+		fmt.Println(send)
+
+	} else {
+		log.Fatal("Status : %d", resp.StatusCode)	
 	}
+	
 	/* Stub code , it will be removed */
-		send = ContainerLists{
+	send = ContainerLists{
 		Cmd:           "sdfsdf",
 		ContainerCount: 2,
 		Container: []ContainerInfo{
@@ -101,6 +100,5 @@ func GetContainersInfo() (ContainerLists, error) {
 			},
 		},
 	}
-
 	return send, nil
 }

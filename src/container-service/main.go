@@ -127,6 +127,13 @@ func wsTest1(ws *websocket.Conn) (err error) {
 	return err
 }
 
+
+type ConnectedResp struct {
+	Cmd       string `json:"cmd"`
+	Token     string `json:"token"`
+	Clinetnum int    `json:"clientnum"`
+}
+
 type ConnectReq struct {
 	Cmd  string `json:"cmd"`
 	Name string `json:"name"`
@@ -144,7 +151,7 @@ func wsReqeustConnection(ws *websocket.Conn, name string) (err error) {
 
 
 func wsReceiveConnection(ws *websocket.Conn) (Token string, err error) {
-	recv := csaapi.ConnectedResp{}
+	recv := ConnectedResp{}
 
 	err = websocket.JSON.Receive(ws, &recv)
 	if err != nil {
@@ -292,7 +299,7 @@ func websocketProxy(target string) http.Handler {
 
 func json_marshal() {
 	// convert from struct to string
-	send := csaapi.ConnectedResp{}
+	send := ConnectedResp{}
 	send.Cmd = "request"
 	send.Token = "1234"
 	send.Clinetnum = 88
@@ -306,7 +313,7 @@ func json_unmarshal() {
 	rcv_str := `{"cmd": "connected" 
 			, "token": "test-token"
 			, "clinetnum": 3}`
-	rcv := csaapi.ConnectedResp{}
+	rcv := ConnectedResp{}
 	json.Unmarshal([]byte(rcv_str), &rcv)
 	fmt.Println(rcv)
 	fmt.Println(rcv.Cmd)
