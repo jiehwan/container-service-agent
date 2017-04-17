@@ -2,10 +2,78 @@
 	"version": 0,
 	"dependencies": [
 		{
+			"importpath": "github.com/Nvveen/Gotty",
+			"repository": "https://github.com/Nvveen/Gotty",
+			"revision": "cd527374f1e5bff4938207604a14f2e38a9cf512",
+			"branch": "master"
+		},
+		{
 			"importpath": "github.com/Sirupsen/logrus",
 			"repository": "https://github.com/Sirupsen/logrus",
 			"revision": "10f801ebc38b33738c9d17d50860f484a0988ff5",
 			"branch": "master"
+		},
+		{
+			"importpath": "github.com/docker/docker/api/types",
+			"repository": "https://github.com/docker/docker",
+			"revision": "a9ff628a3c7c55cf016af88f37c4fb6a6029e17a",
+			"branch": "master",
+			"path": "/api/types"
+		},
+		{
+			"importpath": "github.com/docker/docker/pkg/jsonlog",
+			"repository": "https://github.com/docker/docker",
+			"revision": "a9ff628a3c7c55cf016af88f37c4fb6a6029e17a",
+			"branch": "master",
+			"path": "/pkg/jsonlog"
+		},
+		{
+			"importpath": "github.com/docker/docker/pkg/jsonmessage",
+			"repository": "https://github.com/docker/docker",
+			"revision": "a9ff628a3c7c55cf016af88f37c4fb6a6029e17a",
+			"branch": "master",
+			"path": "/pkg/jsonmessage"
+		},
+		{
+			"importpath": "github.com/docker/docker/pkg/progress",
+			"repository": "https://github.com/docker/docker",
+			"revision": "a9ff628a3c7c55cf016af88f37c4fb6a6029e17a",
+			"branch": "master",
+			"path": "/pkg/progress"
+		},
+		{
+			"importpath": "github.com/docker/docker/pkg/streamformatter",
+			"repository": "https://github.com/docker/docker",
+			"revision": "a9ff628a3c7c55cf016af88f37c4fb6a6029e17a",
+			"branch": "master",
+			"path": "/pkg/streamformatter"
+		},
+		{
+			"importpath": "github.com/docker/docker/pkg/term",
+			"repository": "https://github.com/docker/docker",
+			"revision": "a9ff628a3c7c55cf016af88f37c4fb6a6029e17a",
+			"branch": "master",
+			"path": "/pkg/term"
+		},
+		{
+			"importpath": "github.com/docker/go-connections/nat",
+			"repository": "https://github.com/docker/go-connections",
+			"revision": "e15c02316c12de00874640cd76311849de2aeed5",
+			"branch": "master",
+			"path": "/nat"
+		},
+		{
+			"importpath": "github.com/docker/go-units",
+			"repository": "https://github.com/docker/go-units",
+			"revision": "0dadbb0345b35ec7ef35e228dabb8de89a65bf52",
+			"branch": "master"
+		},
+		{
+			"importpath": "github.com/gogo/protobuf/proto",
+			"repository": "https://github.com/gogo/protobuf",
+			"revision": "6fe4aed35b712b681d5d372e06da5344c22ed61f",
+			"branch": "master",
+			"path": "/proto"
 		},
 		{
 			"importpath": "github.com/gorilla/mux",
@@ -20,11 +88,25 @@
 			"branch": "master"
 		},
 		{
+			"importpath": "golang.org/x/net/context",
+			"repository": "https://go.googlesource.com/net",
+			"revision": "5602c733f70afc6dcec6766be0d5034d4c4f14de",
+			"branch": "master",
+			"path": "/context"
+		},
+		{
 			"importpath": "golang.org/x/net/websocket",
 			"repository": "https://go.googlesource.com/net",
 			"revision": "5602c733f70afc6dcec6766be0d5034d4c4f14de",
 			"branch": "master",
 			"path": "/websocket"
+		},
+		{
+			"importpath": "golang.org/x/time/rate",
+			"repository": "https://go.googlesource.com/time",
+			"revision": "f51c12702a4d776e4c1fa9b0fabab841babae631",
+			"branch": "master",
+			"path": "/rate"
 		},
 		{
 			"importpath": "gopkg.in/airbrake/gobrake.v2",

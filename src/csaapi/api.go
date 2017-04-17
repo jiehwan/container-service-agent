@@ -1,8 +1,8 @@
 package csaapi
 
 import (
-	"fmt"
 	"encoding/json"
+	"github.com/docker/docker/api/types"
 	"github.com/tv42/httpunix"
 	"io/ioutil"
 	"log"
@@ -10,15 +10,13 @@ import (
 	"time"
 )
 
-
 const (
 	ContainerServiceSocket string = "/var/run/container_service.sock"
-	DockerLauncherSocket string = "/var/run/docker_launcher.sock"
-	containerPrefix string = "csaapi"
+	DockerLauncherSocket   string = "/var/run/docker_launcher.sock"
+	containerPrefix        string = "csaapi"
 )
 
 var path string = "http+unix://" + containerPrefix
-
 
 type ContainerInfo struct {
 	ContainerID     string `json:"container_id"`
@@ -30,21 +28,9 @@ type ContainerLists struct {
 	Container      []ContainerInfo `json:"container"`
 }
 
-/*
-// go-to-json output is follows.. but there is problem during init.
-type ContainerLists struct {
-	Cmd string `json:"cmd"`
-	ContainerCount int `json:"container_count"`
-	Container []struct {
-		ContainerID string `json:"container_id"`
-		ContainerStatus string `json:"container_status"`
-	} `json:"container"`
-}
-*/
 type ContainerService interface {
 	GetContainersInfo() (ContainerLists, error)
 }
-
 
 func GetContainersInfo() (ContainerLists, error) {
 
@@ -60,16 +46,16 @@ func GetContainersInfo() (ContainerLists, error) {
 		Transport: u,
 	}
 
-	resp, err := client.Get(path+"/getContainersInfo");
-	
+	resp, err := client.Get(path + "/v1/getContainersInfo")
 
 	var send ContainerLists
 
 	if err != nil {
 		return send, err
-	} 
+	}
 
-	fmt.Println(resp.StatusCode)
+	log.Printf("csaapi : %d", resp.StatusCode)
+
 	if resp.StatusCode == 200 {
 		defer resp.Body.Close()
 
@@ -77,28 +63,26 @@ func GetContainersInfo() (ContainerLists, error) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		send = ContainerLists{}
-		json.Unmarshal([]byte(contents), &send)
-		fmt.Println(send)
+
+		lists := make([]types.Container, 0)
+
+		json.Unmarshal([]byte(contents), &lists)
+		log.Printf("List [%s]", lists)
+
+		send = ContainerLists{
+			Cmd:            lists[0].Command,
+			ContainerCount: 1,
+			Container: []ContainerInfo{
+				{
+					ContainerID:     lists[0].ID,
+					ContainerStatus: lists[0].Status,
+				},
+			},
+		}
 
 	} else {
-		log.Fatal("Status : %d", resp.StatusCode)	
+		log.Printf("Status : %d", resp.StatusCode)
 	}
-	
-	/* Stub code , it will be removed */
-	send = ContainerLists{
-		Cmd:           "sdfsdf",
-		ContainerCount: 2,
-		Container: []ContainerInfo{
-			{
-				ContainerID:     "api-1111",
-				ContainerStatus: "running",
-			},
-			{
-				ContainerID:     "api-2222",
-				ContainerStatus: "exited",
-			},
-		},
-	}
+
 	return send, nil
 }
