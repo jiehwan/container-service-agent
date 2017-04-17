@@ -15,22 +15,58 @@ import (
 
 	"csaapi"
 	"encoding/json"
+
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 var wss_server_url = "ws://10.113.62.204:4000"
 var wss_server_origin = "ws://10.113.62.204:4000"
+//var wss_server_url = "ws://13.124.64.10:4000"
+//var wss_server_origin = "ws://13.124.64.10:4000"
 
 type Command struct {
 	Cmd string `json:"cmd"`
 }
 
+var chSignal chan os.Signal
+var done chan bool
 
 func main() {
+	chSignal = make(chan os.Signal, 1)
+	done = make(chan bool, 1)
+
+	signal.Notify(chSignal, syscall.SIGUSR1)
+	//signal.Notify(chSignal, os.Interrupt)
+	//signal.Notify(chSignal, os.Interrupt, syscall.SIGTERM)
+
+	for {
+		
+		go ClientFunction()
+		
+		<-done
+		time.Sleep(time.Second)
+	}
+
+	
+	
+}
+
+func ClientFunction()(err error) {
+
+	go func() {
+			<-chSignal
+			done <- true
+			return ;
+		}()
 
 	ws, err := ProxyDial(wss_server_url, "tcp", wss_server_origin)
 
 	if err != nil {
-		log.Fatal("ProxyDial : ", err)
+		log.Println("ProxyDial : ", err)
+		syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
+		return err
 	}
 
 	defer ws.Close()
@@ -74,7 +110,9 @@ func wsReceive(ws *websocket.Conn, chan_msg chan string) (err error) {
 	for {
 		err = websocket.Message.Receive(ws, &read_buf)
 		if err != nil {
-			log.Fatal(err)
+			log.Println("wsReceive : ", err)
+			syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
+			return err
 		}
 		log.Printf("received: %s", read_buf)
 		chan_msg <- read_buf
@@ -93,25 +131,6 @@ type _ContainerLists struct {
 }
 
 func wsSendContainerLists(ws *websocket.Conn) (err error) {
-
-	//First.. OK
-	
-	/*
-	send := _ContainerLists{
-		Cmd : "GetContainersInfo",
-		ContainerCount : 2,
-		Container :[]_ContainerInfo{
-			{
-				ContainerID : "1111",
-				ContainerStatus : "running",
-			},
-			{
-				ContainerID : "2222",
-				ContainerStatus : "exited",
-			},
-		},
-	}
-	*/
 
 	send, _ := csaapi.GetContainersInfo()
 
@@ -162,7 +181,9 @@ func wsReceiveConnection(ws *websocket.Conn) (Token string, err error) {
 
 	err = websocket.JSON.Receive(ws, &recv)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("wsReceiveConnection : ", err)
+		syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
+		return "", err
 	}
 
 	return recv.Token, err
@@ -183,7 +204,8 @@ func ProxyDial(url_, protocol, origin string) (ws *websocket.Conn, err error) {
 
 	purl, err := url.Parse(os.Getenv("HTTP_PROXY"))
 	if err != nil {
-		log.Fatal("Parse : ", err)
+		log.Println("Parse : ", err)
+		syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
 		return nil, err
 	}
 
@@ -192,7 +214,8 @@ func ProxyDial(url_, protocol, origin string) (ws *websocket.Conn, err error) {
 	log.Printf("====================================")
 	config, err := websocket.NewConfig(url_, origin)
 	if err != nil {
-		log.Fatal("NewConfig : ", err)
+		log.Println("NewConfig : ", err)
+		syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
 		return nil, err
 	}
 
@@ -205,7 +228,8 @@ func ProxyDial(url_, protocol, origin string) (ws *websocket.Conn, err error) {
 	log.Printf("====================================")
 	client, err := HttpConnect(purl.Host, url_)
 	if err != nil {
-		log.Fatal("HttpConnect : ", err)
+		log.Println("HttpConnect : ", err)
+		syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
 		return nil, err
 	}
 
@@ -226,7 +250,8 @@ func HttpConnect(proxy, url_ string) (io.ReadWriteCloser, error) {
 
 	turl, err := url.Parse(url_)
 	if err != nil {
-		log.Fatal("Parse : ", err)
+		log.Println("Parse : ", err)
+		syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
 		return nil, err
 	}
 
@@ -238,15 +263,6 @@ func HttpConnect(proxy, url_ string) (io.ReadWriteCloser, error) {
 		Host:   turl.Host,
 	}
 
-	/*
-		// origin
-		req := http.Request{
-			Method: "CONNECT",
-			URL:    &url.URL{},
-			Host:   turl.Host,
-		}
-	*/
-
 	proxy_http_conn := httputil.NewProxyClientConn(proxy_tcp_conn, nil)
 	//cc := http.NewClientConn(proxy_tcp_conn, nil)
 
@@ -254,7 +270,8 @@ func HttpConnect(proxy, url_ string) (io.ReadWriteCloser, error) {
 
 	resp, err := proxy_http_conn.Do(&req)
 	if err != nil && err != httputil.ErrPersistEOF {
-		log.Fatal("ErrPersistEOF : ", err)
+		log.Println("ErrPersistEOF : ", err)
+		syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
 		return nil, err
 	}
 	log.Printf("proxy_http_conn<resp> =", (resp))
