@@ -15,6 +15,8 @@ import (
 
 	"csaapi"
 	"encoding/json"
+
+	"time"
 )
 
 var wss_server_url = "ws://10.113.62.204:4000"
@@ -24,13 +26,20 @@ type Command struct {
 	Cmd string `json:"cmd"`
 }
 
+var ws *websocket.Conn
+var err error
 
 func main() {
+	
+	for {
+		ws, err = ProxyDial(wss_server_url, "tcp", wss_server_origin)
 
-	ws, err := ProxyDial(wss_server_url, "tcp", wss_server_origin)
-
-	if err != nil {
-		log.Fatal("ProxyDial : ", err)
+		if err != nil {
+			log.Printf("ProxyDial : ", err)
+			time.Sleep(time.Second)
+			continue
+		}
+		break;
 	}
 
 	defer ws.Close()
@@ -69,12 +78,28 @@ func main() {
 }
 
 func wsReceive(ws *websocket.Conn, chan_msg chan string) (err error) {
+
 	var read_buf string
+
+	defer func() {
+        // recover from panic if one occured. Set err to nil otherwise.
+        for {
+        	log.Printf("panic recovery !!!")
+			ws, err = ProxyDial(wss_server_url, "tcp", wss_server_origin)
+
+			if err != nil {
+				log.Printf("ProxyDial : ", err)
+				time.Sleep(time.Second)
+				continue
+			}
+			break;
+		}
+    }()
 
 	for {
 		err = websocket.Message.Receive(ws, &read_buf)
 		if err != nil {
-			log.Fatal(err)
+			panic("wsReceive failure")
 		}
 		log.Printf("received: %s", read_buf)
 		chan_msg <- read_buf
@@ -113,7 +138,7 @@ func wsSendContainerLists(ws *websocket.Conn) (err error) {
 	}
 	*/
 
-	send, _ := csaapi.GetContainersInfo()
+	send, _ := csaapi.GetContainersInfo_Stub()
 
 
 	log.Printf("send = ", send)
