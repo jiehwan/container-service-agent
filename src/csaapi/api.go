@@ -68,21 +68,27 @@ func GetContainersInfo() (ContainerLists, error) {
 
 		json.Unmarshal([]byte(contents), &lists)
 		log.Printf("List [%s]", lists)
+		var numOfList int = len(lists)
+		log.Printf("numOfList[%d]", numOfList)
 
-		send = ContainerLists{
-			Cmd:            lists[0].Command,
-			ContainerCount: 1,
-			Container: []ContainerInfo{
-				{
-					ContainerID:     lists[0].ID,
-					ContainerStatus: lists[0].Status,
-				},
-			},
+		send.Cmd = "/bin/bash"
+		send.ContainerCount = numOfList
+
+		for i := 0; i < numOfList; i++ {
+			var containerValue = ContainerInfo{
+				ContainerID:     lists[i].ID,
+				ContainerStatus: lists[i].Status,
+			}
+
+			send.Container = append(send.Container, containerValue)
+			log.Printf("[%d]-[%s]", i, send.Container)
 		}
 
 	} else {
 		log.Printf("Status : %d", resp.StatusCode)
 	}
+
+	log.Printf("[%s]", send)
 
 	return send, nil
 }
