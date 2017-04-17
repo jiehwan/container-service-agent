@@ -134,6 +134,13 @@ func wsTest1(ws *websocket.Conn) (err error) {
 	return err
 }
 
+
+type ConnectedResp struct {
+	Cmd       string `json:"cmd"`
+	Token     string `json:"token"`
+	Clinetnum int    `json:"clientnum"`
+}
+
 type ConnectReq struct {
 	Cmd  string `json:"cmd"`
 	Name string `json:"name"`
@@ -149,11 +156,6 @@ func wsReqeustConnection(ws *websocket.Conn, name string) (err error) {
 	return nil
 }
 
-type ConnectedResp struct {
-	Cmd       string `json:"cmd"`
-	Token     string `json:"token"`
-	Clinetnum int    `json:"clientnum"`
-}
 
 func wsReceiveConnection(ws *websocket.Conn) (Token string, err error) {
 	recv := ConnectedResp{}
