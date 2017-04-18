@@ -16,11 +16,8 @@ import (
 	"csaapi"
 	"encoding/json"
 
-<<<<<<< HEAD
-=======
 	"os/signal"
 	"syscall"
->>>>>>> 4ab709a79a03d4338eb378040d54b5886385c59d
 	"time"
 )
 
@@ -33,22 +30,6 @@ type Command struct {
 	Cmd string `json:"cmd"`
 }
 
-<<<<<<< HEAD
-var ws *websocket.Conn
-var err error
-
-func main() {
-	
-	for {
-		ws, err = ProxyDial(wss_server_url, "tcp", wss_server_origin)
-
-		if err != nil {
-			log.Printf("ProxyDial : ", err)
-			time.Sleep(time.Second)
-			continue
-		}
-		break;
-=======
 var chSignal chan os.Signal
 var done chan bool
 
@@ -86,7 +67,6 @@ func ClientFunction()(err error) {
 		log.Println("ProxyDial : ", err)
 		syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
 		return err
->>>>>>> 4ab709a79a03d4338eb378040d54b5886385c59d
 	}
 
 	defer ws.Close()
@@ -146,13 +126,9 @@ func wsReceive(ws *websocket.Conn, chan_msg chan string) (err error) {
 	for {
 		err = websocket.Message.Receive(ws, &read_buf)
 		if err != nil {
-<<<<<<< HEAD
-			panic("wsReceive failure")
-=======
 			log.Println("wsReceive : ", err)
 			syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
 			return err
->>>>>>> 4ab709a79a03d4338eb378040d54b5886385c59d
 		}
 		log.Printf("received: %s", read_buf)
 		chan_msg <- read_buf
@@ -172,31 +148,7 @@ type _ContainerLists struct {
 
 func wsSendContainerLists(ws *websocket.Conn) (err error) {
 
-<<<<<<< HEAD
-	//First.. OK
-	
-	/*
-	send := _ContainerLists{
-		Cmd : "GetContainersInfo",
-		ContainerCount : 2,
-		Container :[]_ContainerInfo{
-			{
-				ContainerID : "1111",
-				ContainerStatus : "running",
-			},
-			{
-				ContainerID : "2222",
-				ContainerStatus : "exited",
-			},
-		},
-	}
-	*/
-
-	send, _ := csaapi.GetContainersInfo_Stub()
-=======
 	send, _ := csaapi.GetContainersInfo()
->>>>>>> 4ab709a79a03d4338eb378040d54b5886385c59d
-
 
 	log.Printf("send = ", send)
 
