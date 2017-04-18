@@ -1,16 +1,22 @@
 package main
 
 import (
+	"bytes"
+	"csaapi"
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/mux"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
-	"csaapi"
-	"fmt"
+)
+
+const (
+	MaxCommandLength int = 10
 )
 
 // APIResponse The api response sent from go supervisor
@@ -43,26 +49,30 @@ func getContainersInfo() ([]byte, error) {
 	log.Printf("getContainersInfo")
 
 	var send_str []byte
-	c, err := net.Dial("unix", csaapi.DockerLauncherSocket) 
+	c, err := net.Dial("unix", csaapi.DockerLauncherSocket)
 	if err != nil {
 		log.Fatal("Dial error", err)
 		return send_str, nil
 	}
-	
+
 	defer c.Close()
 
 	var name string = "getContainersInfo"
-
 	length := len(name)
-	message := make([]byte, 0, length)
-	message = append(message, name...)
 
-	log.Printf("before send: %s\n", string(message))
+	command_size := strconv.Itoa(length)
+	command_size_len := len(command_size)
+	blank := " "
+	blank_len := len(" ")
+
+	message := make([]byte, 0, length+command_size_len+blank_len)
+	message = append(message, command_size...)
+	message = append(message, blank...)
+	message = append(message, name...)
 
 	_, err = c.Write([]byte(message))
 	if err != nil {
 		log.Printf("error: %v\n", err)
-
 	}
 
 	log.Printf("sent: %s\n", message)
@@ -72,69 +82,75 @@ func getContainersInfo() ([]byte, error) {
 
 	}
 
-	data := make([]byte, 0)
+	// Wating message to find size
+	// buf is size
+	buf := make([]byte, MaxCommandLength)
+	for {
+		nr, _ := c.Read(buf)
+		if nr != 0 {
+			break
+		}
+	}
+
+	var count int
+	for i, v := range buf {
+		if v == ' ' {
+			count = i
+			log.Printf("Position of blank[%d]\n", i)
+			break
+		}
+	}
+
+	sizeArray := make([]byte, count)
+	sizeArray = buf[0:count]
+
+	log.Printf("sizearray [%s]\n", string(sizeArray))
+	num, _ := strconv.Atoi(string(sizeArray))
+
+	fmt.Println("Total JSON size is ", num)
+
+	// wating real message
+	data := make([]byte, num)
+	data = append(data, buf[count+1:MaxCommandLength]...)
+	log.Printf("before reading [%s]\n", string(data))
+
+	var checkReceiveSize int = MaxCommandLength - count - 1
 
 	for {
-		buf := make([]byte, 5465)
-		nr, err := c.Read(buf)
+		dataBuf := make([]byte, num-checkReceiveSize)
+		nr, err := c.Read(dataBuf)
 		if err != nil {
 			break
 		}
 
-		buf = buf[:nr]
-		data = append(data, buf...)
+		fmt.Printf("receive data[%s]\n", string(dataBuf))
+
+		dataBuf = dataBuf[:nr]
+		checkReceiveSize += nr
+		log.Printf("CheckReceiveSize [%d]\n", checkReceiveSize)
+		data = append(data, dataBuf...)
+
+		if checkReceiveSize >= num {
+			break
+		}
 	}
+	//delete null character
+	withoutNull := bytes.Trim(data, "\x00")
 
-	log.Printf("%s\n", data)
-	// Need to parse json
-	//Stub Return
-	/*send = csaapi.ContainerLists{
-		Cmd:            "getContainerLists",
-		ContainerCount: 2,
-		Container: []csaapi.ContainerInfo{
-			{
-				ContainerID:     "api-1111",
-				ContainerStatus: "running",
-			},
-			{
-				ContainerID:     "api-2222",
-				ContainerStatus: "exited",
-			},
-		},
-	}*/
-
-	
-	send := csaapi.ContainerLists{
-		Cmd:            "getContainerLists",
-		ContainerCount: 2,
-		Container: []csaapi.ContainerInfo{
-			{
-				ContainerID:     "api-1111",
-				ContainerStatus: "running",
-			},
-			{
-				ContainerID:     "api-2222",
-				ContainerStatus: "exited",
-			},
-		},
-	}
-
-	send_str, _ = json.Marshal(send)
-	fmt.Println(string(send_str))
-
-
-	return send_str, nil
+	return withoutNull, nil
 }
 
 func GetContainersInfoHandler(writer http.ResponseWriter, request *http.Request) {
 	log.Printf("Enter GetContainersInfoHandler")
 
-	sendResponse, sendError := responseSenders(writer)
 	if containersInfo, err := getContainersInfo(); err != nil {
-		sendError(err)
+		writer.Header().Set("Content-Type", "application/json")
+		writer.WriteHeader(http.StatusInternalServerError)
 	} else {
-		log.Printf("%s\n", containersInfo)
-		sendResponse("OK", "", http.StatusOK)
+		writer.Header().Set("Content-Type", "application/json")
+		writer.WriteHeader(http.StatusOK)
+		writer.Write(containersInfo)
+
 	}
 }
 
@@ -144,9 +160,9 @@ func htmlHandler(writer http.ResponseWriter, request *http.Request) {
 
 func setupApi(r *mux.Router) {
 	r.PathPrefix("/").
-	  Path("/ping").
-	  Methods("GET").
-	  HandlerFunc(htmlHandler)
+		Path("/ping").
+		Methods("GET").
+		HandlerFunc(htmlHandler)
 
 	s := r.PathPrefix("/v1").Subrouter()
 	s.HandleFunc("/getContainersInfo", GetContainersInfoHandler).Methods("GET")
