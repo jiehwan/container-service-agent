@@ -13,6 +13,7 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"types/dockerlauncher"
 )
 
 const (
@@ -45,7 +46,107 @@ func responseSenders(writer http.ResponseWriter) (sendResponse func(interface{},
 	return
 }
 
+func getDockerLauncherInfo_Stub() dockerlauncher.GetContainersInfoReturn {
+	send := dockerlauncher.GetContainersInfoReturn{
+		Command: "GetContainersInfo",
+
+		Containers: []dockerlauncher.Container{
+			{
+				ContainerID:     "aaaa",
+				ImageName:       "tizen1",
+				ContainerStatus: "created",
+			},
+			{
+				ContainerID:     "bbbb",
+				ImageName:       "tizen2",
+				ContainerStatus: "exited",
+			},
+		},
+	}
+
+	return send
+}
+
 func getContainersInfo() ([]byte, error) {
+	log.Printf("getContainersInfo")
+
+	/*
+		stub := getDockerLauncherInfo_Stub()
+		var send_stub []byte
+
+		send_stub, _ = json.Marshal(stub)
+		log.Printf(string(send_stub))
+
+		return send_stub, nil
+	*/
+
+	var send_str []byte
+	c, err := net.Dial("unix", csaapi.DockerLauncherSocket)
+	if err != nil {
+		log.Fatal("Dial error", err)
+		return send_str, nil
+	}
+
+	defer c.Close()
+
+	send := dockerlauncher.Cmd{}
+	send.Command = "GetContainersInfo"
+
+	send_str, _ = json.Marshal(send)
+	log.Printf(string(send_str))
+
+	length := len(send_str)
+
+	message := make([]byte, 0, length)
+	message = append(message, send_str...)
+
+	_, err = c.Write([]byte(message))
+	if err != nil {
+		log.Printf("error: %v\n", err)
+	}
+
+	log.Printf("sent: %s\n", message)
+	err = c.(*net.UnixConn).CloseWrite()
+	if err != nil {
+		log.Printf("error: %v\n", err)
+
+	}
+
+	data := make([]byte, 0)
+	for {
+		dataBuf := make([]byte, 1024)
+		nr, err := c.Read(dataBuf)
+		if err != nil {
+			break
+		}
+
+		log.Printf("nr size [%d]", nr)
+		if nr == 0 {
+			break
+		}
+
+		log.Printf("receive data[%s]\n", string(dataBuf))
+
+		dataBuf = dataBuf[:nr]
+		data = append(data, dataBuf...)
+	}
+	//delete null character
+	withoutNull := bytes.Trim(data, "\x00")
+
+	rcv := dockerlauncher.Cmd{}
+	json.Unmarshal([]byte(withoutNull), &rcv)
+	log.Printf("rcv.Cmd = %s", rcv.Command)
+
+	if rcv.Command == "GetContainersInfo" {
+		return withoutNull, nil
+	} else {
+		log.Printf("error commnad\n")
+	}
+
+	return send_str, nil
+}
+
+func getContainersInfo2() ([]byte, error) {
 	log.Printf("getContainersInfo")
 
 	var send_str []byte
@@ -142,12 +243,11 @@ func getContainersInfo() ([]byte, error) {
 
 func GetContainersInfoHandler(writer http.ResponseWriter, request *http.Request) {
 	log.Printf("Enter GetContainersInfoHandler")
-
+	writer.Header().Set("Content-Type", "application/json")
 	if containersInfo, err := getContainersInfo(); err != nil {
-		writer.Header().Set("Content-Type", "application/json")
 		writer.WriteHeader(http.StatusInternalServerError)
 	} else {
-		writer.Header().Set("Content-Type", "application/json")
+
 		writer.WriteHeader(http.StatusOK)
 		writer.Write(containersInfo)
 

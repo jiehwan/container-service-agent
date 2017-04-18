@@ -2,12 +2,13 @@ package csaapi
 
 import (
 	"encoding/json"
-	"github.com/docker/docker/api/types"
 	"github.com/tv42/httpunix"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
+	"types/csac"
+	"types/dockerlauncher"
 )
 
 const (
@@ -18,21 +19,11 @@ const (
 
 var path string = "http+unix://" + containerPrefix
 
-type ContainerInfo struct {
-	ContainerID     string `json:"container_id"`
-	ContainerStatus string `json:"container_status"`
-}
-type ContainerLists struct {
-	Cmd            string          `json:"cmd"`
-	ContainerCount int             `json:"container_count"`
-	Container      []ContainerInfo `json:"container"`
-}
-
 type ContainerService interface {
-	GetContainersInfo() (ContainerLists, error)
+	GetContainersInfo() (csac.ContainerLists, error)
 }
 
-func GetContainersInfo() (ContainerLists, error) {
+func GetContainersInfo() (csac.ContainerLists, error) {
 
 	u := &httpunix.Transport{
 		DialTimeout:           100 * time.Millisecond,
@@ -48,7 +39,7 @@ func GetContainersInfo() (ContainerLists, error) {
 
 	resp, err := client.Get(path + "/v1/getContainersInfo")
 
-	var send ContainerLists
+	var send csac.ContainerLists
 
 	if err != nil {
 		return send, err
@@ -64,20 +55,21 @@ func GetContainersInfo() (ContainerLists, error) {
 			log.Fatal(err)
 		}
 
-		lists := make([]types.Container, 0)
+		lists := dockerlauncher.GetContainersInfoReturn{}
 
 		json.Unmarshal([]byte(contents), &lists)
 		log.Printf("List [%s]", lists)
-		var numOfList int = len(lists)
+		var numOfList int = len(lists.Containers)
 		log.Printf("numOfList[%d]", numOfList)
 
-		send.Cmd = "/bin/bash"
+		send.Cmd = "GetContainersInfo"
 		send.ContainerCount = numOfList
-
+		send.DeviceID = "heronamsu"
 		for i := 0; i < numOfList; i++ {
-			var containerValue = ContainerInfo{
-				ContainerID:     lists[i].ID,
-				ContainerStatus: lists[i].Status,
+			var containerValue = csac.ContainerInfo{
+				ContainerName:   lists.Containers[i].ContainerID,
+				ImageName:       lists.Containers[i].ImageName,
+				ContainerStatus: lists.Containers[i].ContainerStatus,
 			}
 
 			send.Container = append(send.Container, containerValue)

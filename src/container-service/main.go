@@ -23,6 +23,7 @@ import (
 
 var wss_server_url = "ws://10.113.62.204:4000"
 var wss_server_origin = "ws://10.113.62.204:4000"
+
 //var wss_server_url = "ws://13.124.64.10:4000"
 //var wss_server_origin = "ws://13.124.64.10:4000"
 
@@ -42,24 +43,22 @@ func main() {
 	//signal.Notify(chSignal, os.Interrupt, syscall.SIGTERM)
 
 	for {
-		
+
 		go ClientFunction()
-		
+
 		<-done
 		time.Sleep(time.Second)
 	}
 
-	
-	
 }
 
-func ClientFunction()(err error) {
+func ClientFunction() (err error) {
 
 	go func() {
-			<-chSignal
-			done <- true
-			return ;
-		}()
+		<-chSignal
+		done <- true
+		return
+	}()
 
 	ws, err := ProxyDial(wss_server_url, "tcp", wss_server_origin)
 
@@ -109,9 +108,9 @@ func wsReceive(ws *websocket.Conn, chan_msg chan string) (err error) {
 	var read_buf string
 
 	defer func() {
-        // recover from panic if one occured. Set err to nil otherwise.
-        for {
-        	log.Printf("panic recovery !!!")
+		// recover from panic if one occured. Set err to nil otherwise.
+		for {
+			log.Printf("panic recovery !!!")
 			ws, err = ProxyDial(wss_server_url, "tcp", wss_server_origin)
 
 			if err != nil {
@@ -119,9 +118,9 @@ func wsReceive(ws *websocket.Conn, chan_msg chan string) (err error) {
 				time.Sleep(time.Second)
 				continue
 			}
-			break;
+			break
 		}
-    }()
+	}()
 
 	for {
 		err = websocket.Message.Receive(ws, &read_buf)
@@ -134,16 +133,6 @@ func wsReceive(ws *websocket.Conn, chan_msg chan string) (err error) {
 		chan_msg <- read_buf
 	}
 	return err
-}
-
-type _ContainerInfo struct {
-	ContainerID     string `json:"container_id"`
-	ContainerStatus string `json:"container_status"`
-}
-type _ContainerLists struct {
-	Cmd            string          `json:"cmd"`
-	ContainerCount int             `json:"container_count"`
-	Container      []_ContainerInfo `json:"container"`
 }
 
 func wsSendContainerLists(ws *websocket.Conn) (err error) {
@@ -168,7 +157,6 @@ func wsTest1(ws *websocket.Conn) (err error) {
 	return err
 }
 
-
 type ConnectedResp struct {
 	Cmd       string `json:"cmd"`
 	Token     string `json:"token"`
@@ -189,7 +177,6 @@ func wsReqeustConnection(ws *websocket.Conn, name string) (err error) {
 
 	return nil
 }
-
 
 func wsReceiveConnection(ws *websocket.Conn) (Token string, err error) {
 	recv := ConnectedResp{}
@@ -358,46 +345,45 @@ func json_unmarshal() {
 	fmt.Println(rcv.Cmd)
 }
 
-
 type DockerInfo struct {
-	ID string `json:"Id"`
-	Names []string `json:"Names"`
-	Image string `json:"Image"`
-	ImageID string `json:"ImageID"`
-	Command string `json:"Command"`
-	Created int `json:"Created"`
-	Ports []interface{} `json:"Ports"`
-	Labels struct {
+	ID      string        `json:"Id"`
+	Names   []string      `json:"Names"`
+	Image   string        `json:"Image"`
+	ImageID string        `json:"ImageID"`
+	Command string        `json:"Command"`
+	Created int           `json:"Created"`
+	Ports   []interface{} `json:"Ports"`
+	Labels  struct {
 	} `json:"Labels"`
-	State string `json:"State"`
-	Status string `json:"Status"`
+	State      string `json:"State"`
+	Status     string `json:"Status"`
 	HostConfig struct {
 		NetworkMode string `json:"NetworkMode"`
 	} `json:"HostConfig"`
 	NetworkSettings struct {
 		Networks struct {
 			Bridge struct {
-				IPAMConfig interface{} `json:"IPAMConfig"`
-				Links interface{} `json:"Links"`
-				Aliases interface{} `json:"Aliases"`
-				NetworkID string `json:"NetworkID"`
-				EndpointID string `json:"EndpointID"`
-				Gateway string `json:"Gateway"`
-				IPAddress string `json:"IPAddress"`
-				IPPrefixLen int `json:"IPPrefixLen"`
-				IPv6Gateway string `json:"IPv6Gateway"`
-				GlobalIPv6Address string `json:"GlobalIPv6Address"`
-				GlobalIPv6PrefixLen int `json:"GlobalIPv6PrefixLen"`
-				MacAddress string `json:"MacAddress"`
+				IPAMConfig          interface{} `json:"IPAMConfig"`
+				Links               interface{} `json:"Links"`
+				Aliases             interface{} `json:"Aliases"`
+				NetworkID           string      `json:"NetworkID"`
+				EndpointID          string      `json:"EndpointID"`
+				Gateway             string      `json:"Gateway"`
+				IPAddress           string      `json:"IPAddress"`
+				IPPrefixLen         int         `json:"IPPrefixLen"`
+				IPv6Gateway         string      `json:"IPv6Gateway"`
+				GlobalIPv6Address   string      `json:"GlobalIPv6Address"`
+				GlobalIPv6PrefixLen int         `json:"GlobalIPv6PrefixLen"`
+				MacAddress          string      `json:"MacAddress"`
 			} `json:"bridge"`
 		} `json:"Networks"`
 	} `json:"NetworkSettings"`
 	Mounts []struct {
-		Type string `json:"Type"`
-		Source string `json:"Source"`
+		Type        string `json:"Type"`
+		Source      string `json:"Source"`
 		Destination string `json:"Destination"`
-		Mode string `json:"Mode"`
-		RW bool `json:"RW"`
+		Mode        string `json:"Mode"`
+		RW          bool   `json:"RW"`
 		Propagation string `json:"Propagation"`
 	} `json:"Mounts"`
 }
@@ -464,11 +450,11 @@ func dockertest() {
 						,"RW":true
 						,"Propagation":""}]}]`
 
-    dockerinfo := make([]DockerInfo,0)
-    json.Unmarshal([]byte(inputstring), &dockerinfo)
+	dockerinfo := make([]DockerInfo, 0)
+	json.Unmarshal([]byte(inputstring), &dockerinfo)
 
-    fmt.Printf("[0] id =%s\n", dockerinfo[0].ID)
-    fmt.Printf("[0] Image =%s\n", dockerinfo[0].Image)
-    fmt.Printf("[1] id =%s\n", dockerinfo[1].ID)
-    fmt.Printf("[1] Image =%s\n", dockerinfo[1].Image)
+	fmt.Printf("[0] id =%s\n", dockerinfo[0].ID)
+	fmt.Printf("[0] Image =%s\n", dockerinfo[0].Image)
+	fmt.Printf("[1] id =%s\n", dockerinfo[1].ID)
+	fmt.Printf("[1] Image =%s\n", dockerinfo[1].Image)
 }
