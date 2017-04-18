@@ -14,13 +14,6 @@
 			"branch": "master"
 		},
 		{
-			"importpath": "github.com/docker/docker/api/types",
-			"repository": "https://github.com/docker/docker",
-			"revision": "a9ff628a3c7c55cf016af88f37c4fb6a6029e17a",
-			"branch": "master",
-			"path": "/api/types"
-		},
-		{
 			"importpath": "github.com/docker/docker/pkg/jsonlog",
 			"repository": "https://github.com/docker/docker",
 			"revision": "a9ff628a3c7c55cf016af88f37c4fb6a6029e17a",
