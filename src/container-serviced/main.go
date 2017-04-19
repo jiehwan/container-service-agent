@@ -52,12 +52,12 @@ func getDockerLauncherInfo_Stub() dockerlauncher.GetContainersInfoReturn {
 
 		Containers: []dockerlauncher.Container{
 			{
-				ContainerID:     "aaaa",
+				ContainerName:   "aaaa",
 				ImageName:       "tizen1",
 				ContainerStatus: "created",
 			},
 			{
-				ContainerID:     "bbbb",
+				ContainerName:   "bbbb",
 				ImageName:       "tizen2",
 				ContainerStatus: "exited",
 			},
@@ -125,24 +125,25 @@ func getContainersInfo() ([]byte, error) {
 			break
 		}
 
-		log.Printf("receive data[%s]\n", string(dataBuf))
-
 		dataBuf = dataBuf[:nr]
 		data = append(data, dataBuf...)
 	}
+	log.Printf("receive data[%s]\n", string(data))
 	//delete null character
 	withoutNull := bytes.Trim(data, "\x00")
 
 	rcv := dockerlauncher.Cmd{}
-	json.Unmarshal([]byte(withoutNull), &rcv)
-	log.Printf("rcv.Cmd = %s", rcv.Command)
+	err = json.Unmarshal([]byte(withoutNull), &rcv)
+	log.Printf("rcv.Command = %s", rcv.Command)
 
 	if rcv.Command == "GetContainersInfo" {
+		log.Printf("Success\n")
 		return withoutNull, nil
 	} else {
-		log.Printf("error commnad\n")
+		log.Printf("error commnad[%s]\n", err)
 	}
 
+	log.Printf("end\n")
 	return send_str, nil
 }
 
@@ -243,14 +244,15 @@ func getContainersInfo2() ([]byte, error) {
 
 func GetContainersInfoHandler(writer http.ResponseWriter, request *http.Request) {
 	log.Printf("Enter GetContainersInfoHandler")
-	writer.Header().Set("Content-Type", "application/json")
+
 	if containersInfo, err := getContainersInfo(); err != nil {
+		log.Printf("Error GetContainersInfoHandler[%s]", err)
 		writer.WriteHeader(http.StatusInternalServerError)
 	} else {
-
+		log.Printf("Success GetContainersInfoHandler")
+		writer.Header().Set("Content-Type", "application/json")
 		writer.WriteHeader(http.StatusOK)
 		writer.Write(containersInfo)
-
 	}
 }
 

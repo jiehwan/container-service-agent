@@ -9,7 +9,8 @@ type UpdateImage struct {
 }
 
 type Container struct {
-	ContainerID     string `json:"containerID"`
+	ContainerId     string `json:"containerId"`
+	ContainerName   string `json:"containerName"`
 	ImageName       string `json:"imageName"`
 	ContainerStatus string `json:"containerStatus"`
 }

@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"time"
 	"types/csac"
 	"types/dockerlauncher"
@@ -34,14 +35,13 @@ func GetContainersInfo() (csac.ContainerLists, error) {
 	}
 
 	resp, err := client.Get(path + "/v1/getContainersInfo")
-
+	log.Printf("csaapi : %d", resp.StatusCode)
 	var send csac.ContainerLists
 
 	if err != nil {
+		log.Printf("err [%s]", err)
 		return send, err
 	}
-
-	log.Printf("csaapi : %d", resp.StatusCode)
 
 	if resp.StatusCode == 200 {
 		defer resp.Body.Close()
@@ -56,14 +56,19 @@ func GetContainersInfo() (csac.ContainerLists, error) {
 		json.Unmarshal([]byte(contents), &lists)
 		log.Printf("List [%s]", lists)
 		var numOfList int = len(lists.Containers)
-		log.Printf("numOfList[%d]", numOfList)
+		log.Printf("numOfList[%d]\n", numOfList)
 
 		send.Cmd = "GetContainersInfo"
 		send.ContainerCount = numOfList
-		send.DeviceID = "docker for Tizen"
+
+		var hostname string
+		hostname, err = os.Hostname()
+		log.Printf("hostname[%s]\n", hostname)
+		send.DeviceID = hostname
+
 		for i := 0; i < numOfList; i++ {
 			var containerValue = csac.ContainerInfo{
-				ContainerName:   lists.Containers[i].ContainerID,
+				ContainerName:   lists.Containers[i].ContainerName,
 				ImageName:       lists.Containers[i].ImageName,
 				ContainerStatus: lists.Containers[i].ContainerStatus,
 			}
@@ -86,7 +91,7 @@ func UpdateImage(csac.UpdateImageParams) (csac.UpdateImageReturn, error) {
 	var send csac.UpdateImageReturn
 
 	send.Cmd = "UpdateImage"
-	send.DeviceID = "docker for Tizen"
+	send.DeviceID = "ARTIK710-1"
 	send.UpdateState = "Started"
 
 	return send, nil
