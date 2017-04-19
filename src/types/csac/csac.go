@@ -11,3 +11,19 @@ type ContainerLists struct {
 	ContainerCount int             `json:"ContainerCount"`
 	Container      []ContainerInfo `json:"ContainerInfo"`
 }
+
+type UpdateImageInfo struct {
+	DeviceID  string `json:"DeviceID"`
+	ImageName string `json:"ImageName"`
+}
+
+type UpdateImageParams struct {
+	Cmd       string `json:"Cmd"`
+	ImageName string `json:"ImageName"`
+}
+
+type UpdateImageReturn struct {
+	Cmd         string `json:"Cmd"`
+	DeviceID    string `json:"DeviceID"`
+	UpdateState string `json:"UpdateState"`
+}

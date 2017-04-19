@@ -19,10 +19,6 @@ const (
 
 var path string = "http+unix://" + containerPrefix
 
-type ContainerService interface {
-	GetContainersInfo() (csac.ContainerLists, error)
-}
-
 func GetContainersInfo() (csac.ContainerLists, error) {
 
 	u := &httpunix.Transport{
@@ -64,7 +60,7 @@ func GetContainersInfo() (csac.ContainerLists, error) {
 
 		send.Cmd = "GetContainersInfo"
 		send.ContainerCount = numOfList
-		send.DeviceID = "heronamsu"
+		send.DeviceID = "docker for Tizen"
 		for i := 0; i < numOfList; i++ {
 			var containerValue = csac.ContainerInfo{
 				ContainerName:   lists.Containers[i].ContainerID,
@@ -81,6 +77,17 @@ func GetContainersInfo() (csac.ContainerLists, error) {
 	}
 
 	log.Printf("[%s]", send)
+
+	return send, nil
+}
+
+func UpdateImage(csac.UpdateImageParams) (csac.UpdateImageReturn, error) {
+
+	var send csac.UpdateImageReturn
+
+	send.Cmd = "UpdateImage"
+	send.DeviceID = "docker for Tizen"
+	send.UpdateState = "Started"
 
 	return send, nil
 }

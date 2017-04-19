@@ -28,14 +28,26 @@ $ export PATH=$PATH:$(go env GOPATH)/bin
 #### gb
 
 ```
-$ go get github.com/constabulary/gb/ ...
+$ go get github.com/constabulary/gb/...
+```
+
+If you install gb correctly, you can check whether it is installed or not using below command
+
+```
 $ gb info
 ```
 
 #### build
 
+build for arm
 ```
-$ make build
+$ build.sh arm
+```
+or
+
+build for amd64
+```
+$ build.sh
 ```
 
 #### build clean
@@ -44,6 +56,6 @@ $ make build
 $ make clean
 ```
 /bin/ folder is created and **two binaries** you can see in the folder.
-**container-service** is client which can receive a command from server
+**container-service** is client which can receive a command from web server
 **container-serviced** is main daemon to check request form container-service and request to docker-launcher
 
