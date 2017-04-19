@@ -2,9 +2,11 @@ package csaapi
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/tv42/httpunix"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"time"
@@ -19,6 +21,35 @@ const (
 )
 
 var path string = "http+unix://" + containerPrefix
+
+func getHardwareAddress() (string, error) {
+
+	currentNetworkHardwareName := "eth0"
+	netInterface, err := net.InterfaceByName(currentNetworkHardwareName)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	name := netInterface.Name
+	macAddress := netInterface.HardwareAddr
+
+	fmt.Println("Hardware name : ", name)
+	fmt.Println("MAC address : ", macAddress)
+
+	// verify if the MAC address can be parsed properly
+	hwAddr, err := net.ParseMAC(macAddress.String())
+
+	if err != nil {
+		fmt.Println("No able to parse MAC address : ", err)
+		os.Exit(-1)
+	}
+
+	fmt.Printf("Physical hardware address : %s \n", hwAddr.String())
+
+	//var hw string = hwAddr.String()
+	return hwAddr.String(), nil
+}
 
 func GetContainersInfo() (csac.ContainerLists, error) {
 
@@ -61,10 +92,10 @@ func GetContainersInfo() (csac.ContainerLists, error) {
 		send.Cmd = "GetContainersInfo"
 		send.ContainerCount = numOfList
 
-		var hostname string
-		hostname, err = os.Hostname()
-		log.Printf("hostname[%s]\n", hostname)
-		send.DeviceID = hostname
+		macaddress, err := getHardwareAddress()
+
+		log.Printf("macaddress[%s]\n", macaddress)
+		send.DeviceID = macaddress
 
 		for i := 0; i < numOfList; i++ {
 			var containerValue = csac.ContainerInfo{
