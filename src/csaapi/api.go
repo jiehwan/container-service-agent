@@ -1,10 +1,10 @@
 package csaapi
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/tv42/httpunix"
 	"io/ioutil"
 	"log"
 	"net"
@@ -18,12 +18,67 @@ import (
 const (
 	ContainerServiceSocket string = "/var/run/container_service.sock"
 	DockerLauncherSocket   string = "/var/run/docker_launcher.sock"
-	containerPrefix        string = "csaapi"
 )
 
-var path string = "http+unix://" + containerPrefix
+const defaultTimeout = 30 * time.Second
 
-func getHardwareAddress() (string, error) {
+type CSAClient struct {
+	Path       string
+	HTTPClient *http.Client
+}
+
+func newHTTPClient(path string, timeout time.Duration) *http.Client {
+	httpTransport := &http.Transport{}
+
+	socketPath := path
+	unixDial := func(proto, addr string) (net.Conn, error) {
+		return net.DialTimeout("unix", socketPath, timeout)
+	}
+	httpTransport.Dial = unixDial
+
+	return &http.Client{Transport: httpTransport}
+}
+
+func NewCSAClient() (*CSAClient, error) {
+
+	httpClient := newHTTPClient(ContainerServiceSocket, time.Duration(defaultTimeout))
+	return &CSAClient{ContainerServiceSocket, httpClient}, nil
+}
+
+func (client *CSAClient) doRequest(method string, path string, body string) ([]byte, error) {
+	log.Printf("doRequest Method[%s] path[%s]", method, path)
+
+	var resp *http.Response
+	var err error
+
+	switch method {
+	case "GET":
+		resp, err = client.HTTPClient.Get("http://unix" + path)
+	case "POST":
+		reqBody := bytes.NewBufferString(body)
+		log.Printf("reqBody : [%s]\n", reqBody)
+		resp, err = client.HTTPClient.Post("http://unix"+path, "text/plain", reqBody)
+	default:
+		return nil, errors.New("Invaild Method")
+	}
+
+	if resp.StatusCode == 200 {
+		defer resp.Body.Close()
+		contents, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		return contents, err
+	} else {
+		log.Printf("Error  : [%d]\n", resp.StatusCode)
+		return nil, errors.New(string(resp.StatusCode))
+	}
+
+	return nil, err
+}
+
+func GetHardwareAddress() (string, error) {
 
 	currentNetworkHardwareName := "eth0"
 	netInterface, err := net.InterfaceByName(currentNetworkHardwareName)
@@ -36,9 +91,7 @@ func getHardwareAddress() (string, error) {
 	macAddress := netInterface.HardwareAddr
 
 	log.Printf("Hardware name : %s\n", string(name))
-	log.Printf("MAC address : %s\n", string(macAddress))
 
-	// verify if the MAC address can be parsed properly
 	hwAddr, err := net.ParseMAC(macAddress.String())
 
 	if err != nil {
@@ -51,88 +104,74 @@ func getHardwareAddress() (string, error) {
 	return hwAddr.String(), nil
 }
 
-func GetContainersInfo() (csac.ContainerLists, error) {
+func (client *CSAClient) GetContainersInfo() (csac.ContainerLists, error) {
 
-	u := &httpunix.Transport{
-		DialTimeout:           100 * time.Millisecond,
-		RequestTimeout:        1 * time.Second,
-		ResponseHeaderTimeout: 1 * time.Second,
-	}
-
-	u.RegisterLocation(containerPrefix, ContainerServiceSocket)
-
-	var client = http.Client{
-		Transport: u,
-	}
-
-	resp, err := client.Get(path + "/v1/getContainersInfo")
-	log.Printf("csaapi : %d", resp.StatusCode)
 	var send csac.ContainerLists
 
+	contents, err := client.doRequest("GET", "/v1/getContainersInfo", "")
+
 	if err != nil {
-		log.Printf("err [%s]", err)
+		log.Printf("error [%s]", err)
 		return send, err
 	}
 
-	if resp.StatusCode == 200 {
-		defer resp.Body.Close()
+	lists := dockerlauncher.GetContainersInfoReturn{}
 
-		contents, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatal(err)
+	json.Unmarshal([]byte(contents), &lists)
+	var numOfList int = len(lists.Containers)
+	log.Printf("numOfList[%d]\n", numOfList)
+
+	send.Cmd = "GetContainersInfo"
+	send.ContainerCount = numOfList
+
+	macaddress, err := GetHardwareAddress()
+
+	send.DeviceID = macaddress
+	log.Printf("send.DeviceID[%s]\n", send.DeviceID)
+
+	for i := 0; i < numOfList; i++ {
+		var containerValue = csac.ContainerInfo{
+			ContainerName:   lists.Containers[i].ContainerName,
+			ImageName:       lists.Containers[i].ImageName,
+			ContainerStatus: lists.Containers[i].ContainerStatus,
 		}
 
-		lists := dockerlauncher.GetContainersInfoReturn{}
-
-		json.Unmarshal([]byte(contents), &lists)
-		log.Printf("List [%s]", lists)
-		var numOfList int = len(lists.Containers)
-		log.Printf("numOfList[%d]\n", numOfList)
-
-		send.Cmd = "GetContainersInfo"
-		send.ContainerCount = numOfList
-
-		macaddress, err := getHardwareAddress()
-
-		log.Printf("macaddress[%s]\n", macaddress)
-		send.DeviceID = macaddress
-
-		for i := 0; i < numOfList; i++ {
-			var containerValue = csac.ContainerInfo{
-				ContainerName:   lists.Containers[i].ContainerName,
-				ImageName:       lists.Containers[i].ImageName,
-				ContainerStatus: lists.Containers[i].ContainerStatus,
-			}
-
-			send.Container = append(send.Container, containerValue)
-			log.Printf("[%d]-[%s]", i, send.Container)
-		}
-		log.Printf("[%s]", send)
-
-	} else {
-		log.Printf("Status : %d", resp.StatusCode)
-
-		return send, errors.New("Not able to use api")
+		send.Container = append(send.Container, containerValue)
+		log.Printf("[%d]-[%s]", i, send.Container)
 	}
+
+	log.Printf("[%s]", send)
 
 	return send, nil
 }
 
-func UpdateImage(csac.UpdateImageParams) (csac.UpdateImageReturn, error) {
-
+func (client *CSAClient) UpdateImage(data csac.UpdateImageParams) (csac.UpdateImageReturn, error) {
 	var send csac.UpdateImageReturn
 
-	send.Cmd = "UpdateImage"
-	macaddress, err := getHardwareAddress()
+	send_str, _ := json.Marshal(data)
+	fmt.Println(string(send_str))
+
+	contents, err := client.doRequest("POST", "/v1/updateImage", string(send_str))
+
 	if err != nil {
+		log.Printf("error [%s]", err)
 		return send, err
 	}
+
+	object := dockerlauncher.UpdateImageReturn{}
+
+	json.Unmarshal([]byte(contents), &object)
+	log.Printf("object [%s]\n", object)
+
+	send.Cmd = "UpdateImage"
+
+	macaddress, err := GetHardwareAddress()
 
 	log.Printf("macaddress[%s]\n", macaddress)
 	send.DeviceID = macaddress
 
-	send.DeviceID = "ARTIK710-1"
-	send.UpdateState = "Started"
+	send.UpdateState = object.State.CurrentState
+	log.Printf("send.UpdateState[%s]\n", send.UpdateState)
 
 	return send, nil
 }

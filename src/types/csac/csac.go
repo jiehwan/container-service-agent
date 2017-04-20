@@ -18,8 +18,8 @@ type UpdateImageInfo struct {
 }
 
 type UpdateImageParams struct {
-	Cmd       string `json:"Cmd"`
-	ImageName string `json:"ImageName"`
+	ImageName     string `json:"ImageName"`
+	ContainerName string `json:"ContainerName"`
 }
 
 type UpdateImageReturn struct {

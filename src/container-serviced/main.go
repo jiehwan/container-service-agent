@@ -11,8 +11,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
+	"types/csac"
 	"types/dockerlauncher"
 )
 
@@ -48,8 +48,6 @@ func responseSenders(writer http.ResponseWriter) (sendResponse func(interface{},
 
 func getDockerLauncherInfo_Stub() dockerlauncher.GetContainersInfoReturn {
 	send := dockerlauncher.GetContainersInfoReturn{
-		Command: "GetContainersInfo",
-
 		Containers: []dockerlauncher.Container{
 			{
 				ContainerName:   "aaaa",
@@ -67,19 +65,27 @@ func getDockerLauncherInfo_Stub() dockerlauncher.GetContainersInfoReturn {
 	return send
 }
 
+func updateImage_Stub() dockerlauncher.UpdateImageReturn {
+	send := dockerlauncher.UpdateImageReturn{
+		State: dockerlauncher.DeviceState{
+			CurrentState: "Updating",
+		},
+	}
+
+	return send
+}
+
 func getContainersInfo() ([]byte, error) {
 	log.Printf("getContainersInfo")
 
-	/*
-		stub := getDockerLauncherInfo_Stub()
-		var send_stub []byte
+	/*stub := getDockerLauncherInfo_Stub()
+	var send_stub []byte
 
-		send_stub, _ = json.Marshal(stub)
-		log.Printf(string(send_stub))
+	send_stub, _ = json.Marshal(stub)
+	log.Printf(string(send_stub))
 
-		return send_stub, nil
+	return send_stub, nil
 	*/
-
 	var send_str []byte
 	c, err := net.Dial("unix", csaapi.DockerLauncherSocket)
 	if err != nil {
@@ -147,9 +153,17 @@ func getContainersInfo() ([]byte, error) {
 	return send_str, nil
 }
 
-func getContainersInfo2() ([]byte, error) {
-	log.Printf("getContainersInfo")
+func updateImageRequest(ImageName, ContainerName string) ([]byte, error) {
+	log.Printf("updateImageRequest")
 
+	/*stub := updateImage_Stub()
+	var send_stub []byte
+
+	send_stub, _ = json.Marshal(stub)
+	log.Printf(string(send_stub))
+
+	return send_stub, nil
+	*/
 	var send_str []byte
 	c, err := net.Dial("unix", csaapi.DockerLauncherSocket)
 	if err != nil {
@@ -159,18 +173,21 @@ func getContainersInfo2() ([]byte, error) {
 
 	defer c.Close()
 
-	var name string = "getContainersInfo"
-	length := len(name)
+	send := dockerlauncher.UpdateImageParameters{}
+	send.Command = "UpdateImage"
 
-	command_size := strconv.Itoa(length)
-	command_size_len := len(command_size)
-	blank := " "
-	blank_len := len(" ")
+	send.Param = dockerlauncher.UpdateParam{
+		ContainerName: ContainerName,
+		ImageName:     ImageName,
+	}
 
-	message := make([]byte, 0, length+command_size_len+blank_len)
-	message = append(message, command_size...)
-	message = append(message, blank...)
-	message = append(message, name...)
+	send_str, _ = json.Marshal(send)
+	log.Printf(string(send_str))
+
+	length := len(send_str)
+
+	message := make([]byte, 0, length)
+	message = append(message, send_str...)
 
 	_, err = c.Write([]byte(message))
 	if err != nil {
@@ -184,62 +201,55 @@ func getContainersInfo2() ([]byte, error) {
 
 	}
 
-	// Wating message to find size
-	// buf is size
-	buf := make([]byte, MaxCommandLength)
+	data := make([]byte, 0)
 	for {
-		nr, _ := c.Read(buf)
-		if nr != 0 {
-			break
-		}
-	}
-
-	var count int
-	for i, v := range buf {
-		if v == ' ' {
-			count = i
-			log.Printf("Position of blank[%d]\n", i)
-			break
-		}
-	}
-
-	sizeArray := make([]byte, count)
-	sizeArray = buf[0:count]
-
-	log.Printf("sizearray [%s]\n", string(sizeArray))
-	num, _ := strconv.Atoi(string(sizeArray))
-
-	fmt.Println("Total JSON size is ", num)
-
-	// wating real message
-	data := make([]byte, num)
-	data = append(data, buf[count+1:MaxCommandLength]...)
-	log.Printf("before reading [%s]\n", string(data))
-
-	var checkReceiveSize int = MaxCommandLength - count - 1
-
-	for {
-		dataBuf := make([]byte, num-checkReceiveSize)
+		dataBuf := make([]byte, 1024)
 		nr, err := c.Read(dataBuf)
 		if err != nil {
 			break
 		}
 
-		fmt.Printf("receive data[%s]\n", string(dataBuf))
-
-		dataBuf = dataBuf[:nr]
-		checkReceiveSize += nr
-		log.Printf("CheckReceiveSize [%d]\n", checkReceiveSize)
-		data = append(data, dataBuf...)
-
-		if checkReceiveSize >= num {
+		log.Printf("nr size [%d]", nr)
+		if nr == 0 {
 			break
 		}
+
+		dataBuf = dataBuf[:nr]
+		data = append(data, dataBuf...)
 	}
+	log.Printf("receive data[%s]\n", string(data))
 	//delete null character
 	withoutNull := bytes.Trim(data, "\x00")
 
-	return withoutNull, nil
+	rcv := dockerlauncher.Cmd{}
+	err = json.Unmarshal([]byte(withoutNull), &rcv)
+	log.Printf("rcv.Command = %s", rcv.Command)
+
+	if rcv.Command == "UpdateImage" {
+		log.Printf("Success\n")
+		return withoutNull, nil
+	} else {
+		log.Printf("error commnad[%s]\n", err)
+	}
+
+	log.Printf("end\n")
+	return send_str, nil
+}
+
+func parseUpdateImageParam(request *http.Request) (ImageName, ContainerName string, err error) {
+
+	var body csac.UpdateImageParams
+
+	decoder := json.NewDecoder(request.Body)
+	decoder.Decode(&body)
+
+	log.Printf("body.ImageName = %s", body.ImageName)
+	log.Printf("body.ContainerName = %s", body.ContainerName)
+
+	ImageName = body.ImageName
+	ContainerName = body.ContainerName
+
+	return ImageName, ContainerName, err
 }
 
 func GetContainersInfoHandler(writer http.ResponseWriter, request *http.Request) {
@@ -256,6 +266,25 @@ func GetContainersInfoHandler(writer http.ResponseWriter, request *http.Request)
 	}
 }
 
+func UpdateImageHandler(writer http.ResponseWriter, request *http.Request) {
+	log.Printf("Enter UpdateImageHandler")
+
+	imageName, containerName, err := parseUpdateImageParam(request)
+	if err != nil {
+		log.Printf("Error here [%s]", err)
+	}
+	if updateImageState, err := updateImageRequest(imageName, containerName); err != nil {
+		log.Printf("Error UpdateImageHandler[%s]", err)
+		writer.WriteHeader(http.StatusInternalServerError)
+	} else {
+		log.Printf("Success UpdateImageHandler")
+		writer.Header().Set("Content-Type", "application/json")
+		writer.WriteHeader(http.StatusOK)
+		writer.Write(updateImageState)
+	}
+
+}
+
 func htmlHandler(writer http.ResponseWriter, request *http.Request) {
 	fmt.Fprintln(writer, "OK")
 }
@@ -268,6 +297,7 @@ func setupApi(r *mux.Router) {
 
 	s := r.PathPrefix("/v1").Subrouter()
 	s.HandleFunc("/getContainersInfo", GetContainersInfoHandler).Methods("GET")
+	s.HandleFunc("/updateImage", UpdateImageHandler).Methods("POST")
 }
 
 func main() {

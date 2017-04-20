@@ -15,6 +15,7 @@ import (
 
 	"csaapi"
 	"encoding/json"
+	"types/csac"
 
 	"os/signal"
 	"syscall"
@@ -29,6 +30,11 @@ var wss_server_origin = "ws://10.113.62.204:4000"
 
 type Command struct {
 	Cmd string `json:"cmd"`
+}
+
+type UpdateParam struct {
+	ImageName     string `json:"ImageName"`
+	ContainerName string `json:"ContainerName"`
 }
 
 var chSignal chan os.Signal
@@ -75,9 +81,7 @@ func ClientFunction() (err error) {
 	messages := make(chan string)
 	go wsReceive(ws, messages)
 
-	host, _ := os.Hostname()
-	pid := os.Getpid()
-	name := fmt.Sprintf("%s-P%d", host, pid)
+	name, _ := csaapi.GetHardwareAddress()
 
 	err = wsReqeustConnection(ws, name)
 
@@ -95,7 +99,9 @@ func ClientFunction() (err error) {
 		case "GetContainersInfo":
 			log.Printf("command <GetContainersInfo>")
 			wsSendContainerLists(ws)
-
+		case "UpdateImage":
+			log.Printf("command <UpdateImage>")
+			wsSendUpdateImage(ws, parseUpdateParam([]byte(msg)))
 		default:
 			log.Printf("add command of {%s}", rcv.Cmd)
 		}
@@ -137,13 +143,59 @@ func wsReceive(ws *websocket.Conn, chan_msg chan string) (err error) {
 
 func wsSendContainerLists(ws *websocket.Conn) (err error) {
 
-	send, _ := csaapi.GetContainersInfo()
+	client, err := csaapi.NewCSAClient()
 
-	log.Printf("send = ", send)
+	if err != nil {
+		log.Printf("error = ", err)
+		return err
+	}
 
-	websocket.JSON.Send(ws, send)
+	send, err1 := client.GetContainersInfo()
+
+	if err1 != nil {
+		log.Printf("error = ", err1)
+		return err1
+	} else {
+		log.Printf("send = ", send)
+		websocket.JSON.Send(ws, send)
+	}
+	return nil
+}
+
+func wsSendUpdateImage(ws *websocket.Conn, data UpdateParam) (err error) {
+
+	client, err := csaapi.NewCSAClient()
+
+	if err != nil {
+		log.Printf("error = ", err)
+		return err
+	}
+
+	param := csac.UpdateImageParams{
+		ImageName:     data.ImageName,
+		ContainerName: data.ContainerName,
+	}
+	send, err1 := client.UpdateImage(param)
+	//send, err := csaapi.UpdateImage(param)
+
+	if err1 != nil {
+		log.Printf("error = ", err1)
+		return err1
+	} else {
+		log.Printf("send = ", send)
+		websocket.JSON.Send(ws, send)
+	}
 
 	return nil
+}
+
+func parseUpdateParam(msg []byte) UpdateParam {
+	send := UpdateParam{}
+	json.Unmarshal([]byte(msg), &send)
+	fmt.Println("parsing ContainerName: " + send.ContainerName)
+	fmt.Println("parsing ImageName: " + send.ImageName)
+
+	return send
 }
 
 func wsTest1(ws *websocket.Conn) (err error) {

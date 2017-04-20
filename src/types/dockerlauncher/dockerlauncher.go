@@ -1,11 +1,7 @@
 package dockerlauncher
 
 type DeviceState struct {
-	UpdateState string `json:"updateState"`
-}
-
-type UpdateImage struct {
-	State DeviceState `json:"deviceState"`
+	CurrentState string `json:"currentState"`
 }
 
 type Container struct {
@@ -22,18 +18,20 @@ type ErrorReturn struct {
 type Cmd struct {
 	Command string `json:"command"`
 }
+type UpdateParam struct {
+	ImageName     string `json:"imageName"`
+	ContainerName string `json:"containerName"`
+}
 
 type UpdateImageParameters struct {
-	Command     string      `json:"command"`
-	UpdateParam UpdateImage `json:"updateParam'`
+	Command string      `json:"command"`
+	Param   UpdateParam `json:"updateParam'`
 }
 
 type GetContainersInfoReturn struct {
-	Command    string      `json:"command"`
 	Containers []Container `json:"containers"`
 }
 
-type GetUpdateImageReturn struct {
-	Command string      `json:"command"`
-	State   DeviceState `json:"deviceState"`
+type UpdateImageReturn struct {
+	State DeviceState `json:"deviceState"`
 }

@@ -35,25 +35,11 @@
 			"path": "/pkg/progress"
 		},
 		{
-			"importpath": "github.com/docker/docker/pkg/streamformatter",
-			"repository": "https://github.com/docker/docker",
-			"revision": "a9ff628a3c7c55cf016af88f37c4fb6a6029e17a",
-			"branch": "master",
-			"path": "/pkg/streamformatter"
-		},
-		{
 			"importpath": "github.com/docker/docker/pkg/term",
 			"repository": "https://github.com/docker/docker",
 			"revision": "a9ff628a3c7c55cf016af88f37c4fb6a6029e17a",
 			"branch": "master",
 			"path": "/pkg/term"
-		},
-		{
-			"importpath": "github.com/docker/go-connections/nat",
-			"repository": "https://github.com/docker/go-connections",
-			"revision": "e15c02316c12de00874640cd76311849de2aeed5",
-			"branch": "master",
-			"path": "/nat"
 		},
 		{
 			"importpath": "github.com/docker/go-units",
@@ -72,12 +58,6 @@
 			"importpath": "github.com/gorilla/mux",
 			"repository": "https://github.com/gorilla/mux",
 			"revision": "599cba5e7b6137d46ddf58fb1765f5d928e69604",
-			"branch": "master"
-		},
-		{
-			"importpath": "github.com/tv42/httpunix",
-			"repository": "https://github.com/tv42/httpunix",
-			"revision": "b75d8614f926c077e48d85f1f8f7885b758c6225",
 			"branch": "master"
 		},
 		{
