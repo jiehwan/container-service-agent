@@ -2,6 +2,7 @@ package csaapi
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/tv42/httpunix"
 	"io/ioutil"
@@ -34,20 +35,19 @@ func getHardwareAddress() (string, error) {
 	name := netInterface.Name
 	macAddress := netInterface.HardwareAddr
 
-	fmt.Println("Hardware name : ", name)
-	fmt.Println("MAC address : ", macAddress)
+	log.Printf("Hardware name : %s\n", string(name))
+	log.Printf("MAC address : %s\n", string(macAddress))
 
 	// verify if the MAC address can be parsed properly
 	hwAddr, err := net.ParseMAC(macAddress.String())
 
 	if err != nil {
-		fmt.Println("No able to parse MAC address : ", err)
+		log.Printf("No able to parse MAC address : %s\n", err)
 		os.Exit(-1)
 	}
 
-	fmt.Printf("Physical hardware address : %s \n", hwAddr.String())
+	log.Printf("Physical hardware address : %s \n", hwAddr.String())
 
-	//var hw string = hwAddr.String()
 	return hwAddr.String(), nil
 }
 
@@ -107,12 +107,13 @@ func GetContainersInfo() (csac.ContainerLists, error) {
 			send.Container = append(send.Container, containerValue)
 			log.Printf("[%d]-[%s]", i, send.Container)
 		}
+		log.Printf("[%s]", send)
 
 	} else {
 		log.Printf("Status : %d", resp.StatusCode)
-	}
 
-	log.Printf("[%s]", send)
+		return send, errors.New("Not able to use api")
+	}
 
 	return send, nil
 }
@@ -122,6 +123,14 @@ func UpdateImage(csac.UpdateImageParams) (csac.UpdateImageReturn, error) {
 	var send csac.UpdateImageReturn
 
 	send.Cmd = "UpdateImage"
+	macaddress, err := getHardwareAddress()
+	if err != nil {
+		return send, err
+	}
+
+	log.Printf("macaddress[%s]\n", macaddress)
+	send.DeviceID = macaddress
+
 	send.DeviceID = "ARTIK710-1"
 	send.UpdateState = "Started"
 
