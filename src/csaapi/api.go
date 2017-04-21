@@ -1,18 +1,29 @@
 package csaapi
 
 import (
-	"bytes"
+	//"bytes"
 	"encoding/json"
-	"errors"
+	//"errors"
 	"fmt"
-	"io/ioutil"
+	//"io/ioutil"
 	"log"
 	"net"
-	"net/http"
+	//"net/http"
 	"os"
-	"time"
-	"types/csac"
-	"types/dockerlauncher"
+	//	"time"
+	"../types/csac"
+	"../types/dockerlauncher"
+
+	"strings"
+
+	"context"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
+	//"github.com/docker/docker/integration-cli/cli"
+	//"github.com/docker/docker/api/types/container"
+	//"github.com/docker/docker/integration-cli/checker"
+	//icmd "github.com/docker/docker/pkg/testutil/cmd"
+	//"github.com/go-check/check"
 )
 
 const (
@@ -20,120 +31,126 @@ const (
 	DockerLauncherSocket   string = "/var/run/docker_launcher.sock"
 )
 
-const defaultTimeout = 30 * time.Second
-
-type CSAClient struct {
-	Path       string
-	HTTPClient *http.Client
-}
-
-func newHTTPClient(path string, timeout time.Duration) *http.Client {
-	httpTransport := &http.Transport{}
-
-	socketPath := path
-	unixDial := func(proto, addr string) (net.Conn, error) {
-		return net.DialTimeout("unix", socketPath, timeout)
-	}
-	httpTransport.Dial = unixDial
-
-	return &http.Client{Transport: httpTransport}
-}
-
-func NewCSAClient() (*CSAClient, error) {
-
-	httpClient := newHTTPClient(ContainerServiceSocket, time.Duration(defaultTimeout))
-	return &CSAClient{ContainerServiceSocket, httpClient}, nil
-}
-
-func (client *CSAClient) doRequest(method string, path string, body string) ([]byte, error) {
-	log.Printf("doRequest Method[%s] path[%s]", method, path)
-
-	var resp *http.Response
-	var err error
-
-	switch method {
-	case "GET":
-		resp, err = client.HTTPClient.Get("http://unix" + path)
-	case "POST":
-		reqBody := bytes.NewBufferString(body)
-		log.Printf("reqBody : [%s]\n", reqBody)
-		resp, err = client.HTTPClient.Post("http://unix"+path, "text/plain", reqBody)
-	default:
-		return nil, errors.New("Invaild Method")
-	}
-
-	if resp.StatusCode == 200 {
-		defer resp.Body.Close()
-		contents, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		return contents, err
-	} else {
-		log.Printf("Error  : [%d]\n", resp.StatusCode)
-		return nil, errors.New(string(resp.StatusCode))
-	}
-
-	return nil, err
-}
-
 func GetHardwareAddress() (string, error) {
 
-	currentNetworkHardwareName := "eth0"
-	netInterface, err := net.InterfaceByName(currentNetworkHardwareName)
+	//----------------------
+	// Get the local machine IP address
+	// https://www.socketloop.com/tutorials/golang-how-do-I-get-the-local-ip-non-loopback-address
+	//----------------------
+
+	addrs, err := net.InterfaceAddrs()
 
 	if err != nil {
-		fmt.Println(err)
+	     fmt.Println(err)
 	}
 
-	name := netInterface.Name
-	macAddress := netInterface.HardwareAddr
+	var currentIP, currentNetworkHardwareName string
 
-	log.Printf("Hardware name : %s\n", string(name))
+	for _, address := range addrs {
 
-	hwAddr, err := net.ParseMAC(macAddress.String())
+	     // check the address type and if it is not a loopback the display it
+	     // = GET LOCAL IP ADDRESS
+	     if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+	             if ipnet.IP.To4() != nil {
+	                     fmt.Println("Current IP address : ", ipnet.IP.String())
+	                     currentIP = ipnet.IP.String()
+	             }
+	     }
+	}
+
+	fmt.Println("------------------------------")
+	fmt.Println("We want the interface name that has the current IP address")
+	fmt.Println("MUST NOT be binded to 127.0.0.1 ")
+	fmt.Println("------------------------------")
+
+	// get all the system's or local machine's network interfaces
+
+	interfaces, _ := net.Interfaces()
+	for _, interf := range interfaces {
+
+	     if addrs, err := interf.Addrs(); err == nil {
+	             for index, addr := range addrs {
+	                     fmt.Println("[", index, "]", interf.Name, ">", addr)
+
+	                     // only interested in the name with current IP address
+	                     if strings.Contains(addr.String(), currentIP) {
+	                             fmt.Println("Use name : ", interf.Name)
+	                             currentNetworkHardwareName = interf.Name
+	                     }
+	             }
+	     }
+	}
+
+	fmt.Println("------------------------------")
+
+	// extract the hardware information base on the interface name
+	// capture above
+	netInterface_, err := net.InterfaceByName(currentNetworkHardwareName)
 
 	if err != nil {
-		log.Printf("No able to parse MAC address : %s\n", err)
-		os.Exit(-1)
+	     fmt.Println(err)
 	}
 
-	log.Printf("Physical hardware address : %s \n", hwAddr.String())
+	name_ := netInterface_.Name
+	macAddress_ := netInterface_.HardwareAddr
 
-	return hwAddr.String(), nil
+	fmt.Println("Hardware name : ", name_)
+	fmt.Println("MAC address : ", macAddress_)
+
+	// verify if the MAC address can be parsed properly
+	hwAddr_, err := net.ParseMAC(macAddress_.String())
+
+	if err != nil {
+	     fmt.Println("No able to parse MAC address : ", err)
+	     os.Exit(-1)
+	}
+
+	fmt.Printf("Physical hardware address : %s \n", hwAddr_.String())
+	
+
+	return macAddress_.String(), nil
 }
 
-func (client *CSAClient) GetContainersInfo() (csac.ContainerLists, error) {
+func GetContainersInfo() (csac.ContainerLists, error) {
 
 	var send csac.ContainerLists
 
-	contents, err := client.doRequest("GET", "/v1/getContainersInfo", "")
+	log.Printf("api.GetContainersInfo ~~~")
 
+	// stub : "GET", "/v1/getContainersInfo"
+	///////////////////////////////////////////////////////////
+
+	cli, err := client.NewEnvClient()
 	if err != nil {
-		log.Printf("error [%s]", err)
-		return send, err
+		panic(err)
 	}
 
-	lists := dockerlauncher.GetContainersInfoReturn{}
+	contents, err := cli.ContainerList(context.Background(), 
+									types.ContainerListOptions{All: true})
+	if err != nil {
+		panic(err)
+	}
 
-	json.Unmarshal([]byte(contents), &lists)
-	var numOfList int = len(lists.Containers)
+	// refer type def : https://github.com/docker/engine-api/blob/master/types/types.go#L148
+	fmt.Printf("contents=%s\n", contents)
+
+	
+	var numOfList int = len(contents)
 	log.Printf("numOfList[%d]\n", numOfList)
 
 	send.Cmd = "GetContainersInfo"
 	send.ContainerCount = numOfList
 
-	macaddress, err := GetHardwareAddress()
+	macaddress, _ := GetHardwareAddress()
 
 	send.DeviceID = macaddress
 	log.Printf("send.DeviceID[%s]\n", send.DeviceID)
 
 	for i := 0; i < numOfList; i++ {
 		var containerValue = csac.ContainerInfo{
-			ContainerName:   lists.Containers[i].ContainerName,
-			ImageName:       lists.Containers[i].ImageName,
-			ContainerStatus: lists.Containers[i].ContainerStatus,
+			ContainerName:   contents[i].Names[0],
+			ImageName:       contents[i].Image,
+			ContainerStatus: contents[i].State,
 		}
 
 		send.Container = append(send.Container, containerValue)
@@ -145,18 +162,19 @@ func (client *CSAClient) GetContainersInfo() (csac.ContainerLists, error) {
 	return send, nil
 }
 
-func (client *CSAClient) UpdateImage(data csac.UpdateImageParams) (csac.UpdateImageReturn, error) {
+func UpdateImage(data csac.UpdateImageParams) (csac.UpdateImageReturn, error) {
 	var send csac.UpdateImageReturn
 
 	send_str, _ := json.Marshal(data)
 	fmt.Println(string(send_str))
 
-	contents, err := client.doRequest("POST", "/v1/updateImage", string(send_str))
+	// stub : "POST", "/v1/updateImage"
+	///////////////////////////////////////////////////////////
 
-	if err != nil {
-		log.Printf("error [%s]", err)
-		return send, err
-	}
+	contents := ""
+
+	///////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////
 
 	object := dockerlauncher.UpdateImageReturn{}
 
@@ -165,7 +183,7 @@ func (client *CSAClient) UpdateImage(data csac.UpdateImageParams) (csac.UpdateIm
 
 	send.Cmd = "UpdateImage"
 
-	macaddress, err := GetHardwareAddress()
+	macaddress, _ := GetHardwareAddress()
 
 	log.Printf("macaddress[%s]\n", macaddress)
 	send.DeviceID = macaddress
